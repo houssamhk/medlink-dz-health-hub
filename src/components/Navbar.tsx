@@ -21,11 +21,11 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { name: "Accueil", href: "#hero" },
-    { name: "Services", href: "#services" },
-    { name: "Médecins", href: "#doctors" },
-    { name: "Pharmacies", href: "#pharmacy" },
-    { name: "À propos", href: "#about" },
+    { name: "الرئيسية", href: "/" },
+    { name: "الأطباء", href: "/doctors" },
+    { name: "تحليل النتائج", href: "/lab-results" },
+    { name: "المساعد الذكي", href: "/ai-triage" },
+    { name: "الصيدليات", href: "/pharmacies" },
   ];
 
   return (
@@ -45,13 +45,13 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.name}
-                href={link.href}
+                to={link.href}
                 className="text-muted-foreground hover:text-primary font-medium transition-colors duration-300"
               >
                 {link.name}
-              </a>
+              </Link>
             ))}
           </div>
 
@@ -83,10 +83,10 @@ const Navbar = () => {
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
-                  Connexion
+                  تسجيل الدخول
                 </Button>
                 <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
-                  Inscription
+                  حساب جديد
                 </Button>
               </>
             )}
@@ -106,14 +106,14 @@ const Navbar = () => {
           <div className="md:hidden py-4 border-t border-border/50 animate-slide-up">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.name}
-                  href={link.href}
+                  to={link.href}
                   className="text-muted-foreground hover:text-primary font-medium transition-colors px-2 py-2"
                   onClick={() => setIsOpen(false)}
                 >
                   {link.name}
-                </a>
+                </Link>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
                 {user ? (
@@ -128,10 +128,10 @@ const Navbar = () => {
                 ) : (
                   <>
                     <Button variant="outline" className="w-full" onClick={() => { navigate('/auth'); setIsOpen(false); }}>
-                      Connexion
+                      تسجيل الدخول
                     </Button>
                     <Button variant="hero" className="w-full" onClick={() => { navigate('/auth'); setIsOpen(false); }}>
-                      Inscription
+                      حساب جديد
                     </Button>
                   </>
                 )}

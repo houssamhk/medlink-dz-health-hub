@@ -1,1 +1,7 @@
 project_id = "brqiohrywqfqvzeqsmpe"
+
+[functions.analyze-lab-results]
+verify_jwt = false
+
+[functions.ai-triage]
+verify_jwt = false
