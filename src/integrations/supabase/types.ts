@@ -178,40 +178,58 @@ export type Database = {
       }
       medical_records: {
         Row: {
+          ai_analysis: string | null
+          ai_recommendations: string[] | null
+          analyzed_at: string | null
           appointment_id: string | null
+          barcode: string | null
           created_at: string | null
           data: Json | null
           description: string | null
           doctor_id: string | null
           file_url: string | null
           id: string
+          lab_id: string | null
           patient_id: string
           record_type: Database["public"]["Enums"]["record_type"]
           title: string
+          urgency_level: string | null
         }
         Insert: {
+          ai_analysis?: string | null
+          ai_recommendations?: string[] | null
+          analyzed_at?: string | null
           appointment_id?: string | null
+          barcode?: string | null
           created_at?: string | null
           data?: Json | null
           description?: string | null
           doctor_id?: string | null
           file_url?: string | null
           id?: string
+          lab_id?: string | null
           patient_id: string
           record_type: Database["public"]["Enums"]["record_type"]
           title: string
+          urgency_level?: string | null
         }
         Update: {
+          ai_analysis?: string | null
+          ai_recommendations?: string[] | null
+          analyzed_at?: string | null
           appointment_id?: string | null
+          barcode?: string | null
           created_at?: string | null
           data?: Json | null
           description?: string | null
           doctor_id?: string | null
           file_url?: string | null
           id?: string
+          lab_id?: string | null
           patient_id?: string
           record_type?: Database["public"]["Enums"]["record_type"]
           title?: string
+          urgency_level?: string | null
         }
         Relationships: [
           {
