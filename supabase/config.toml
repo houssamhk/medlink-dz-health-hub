@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.ai-triage]
 verify_jwt = false
+
+[functions.smart-assistant]
+verify_jwt = false

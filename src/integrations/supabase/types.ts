@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_learning_data: {
+        Row: {
+          created_at: string
+          diagnosis_given: string | null
+          doctor_specialty_id: string | null
+          evaluation_id: string
+          id: string
+          is_verified: boolean | null
+          lab_values: Json | null
+          patient_age: number | null
+          patient_gender: string | null
+          symptoms: string[] | null
+          urgency_given: string
+        }
+        Insert: {
+          created_at?: string
+          diagnosis_given?: string | null
+          doctor_specialty_id?: string | null
+          evaluation_id: string
+          id?: string
+          is_verified?: boolean | null
+          lab_values?: Json | null
+          patient_age?: number | null
+          patient_gender?: string | null
+          symptoms?: string[] | null
+          urgency_given: string
+        }
+        Update: {
+          created_at?: string
+          diagnosis_given?: string | null
+          doctor_specialty_id?: string | null
+          evaluation_id?: string
+          id?: string
+          is_verified?: boolean | null
+          lab_values?: Json | null
+          patient_age?: number | null
+          patient_gender?: string | null
+          symptoms?: string[] | null
+          urgency_given?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_learning_data_doctor_specialty_id_fkey"
+            columns: ["doctor_specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_learning_data_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_triage_sessions: {
         Row: {
           ai_response: string | null
@@ -102,6 +159,95 @@ export type Database = {
           },
         ]
       }
+      doctor_capacity: {
+        Row: {
+          created_at: string
+          current_appointments: number
+          current_file_reviews: number
+          date: string
+          doctor_id: string
+          id: string
+          max_appointments: number
+          max_file_reviews: number
+        }
+        Insert: {
+          created_at?: string
+          current_appointments?: number
+          current_file_reviews?: number
+          date: string
+          doctor_id: string
+          id?: string
+          max_appointments?: number
+          max_file_reviews?: number
+        }
+        Update: {
+          created_at?: string
+          current_appointments?: number
+          current_file_reviews?: number
+          date?: string
+          doctor_id?: string
+          id?: string
+          max_appointments?: number
+          max_file_reviews?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_capacity_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_evaluations: {
+        Row: {
+          created_at: string
+          diagnosis: string | null
+          doctor_id: string
+          id: string
+          medical_record_id: string
+          notes: string | null
+          recommendations: string[] | null
+          urgency_level: string
+        }
+        Insert: {
+          created_at?: string
+          diagnosis?: string | null
+          doctor_id: string
+          id?: string
+          medical_record_id: string
+          notes?: string | null
+          recommendations?: string[] | null
+          urgency_level: string
+        }
+        Update: {
+          created_at?: string
+          diagnosis?: string | null
+          doctor_id?: string
+          id?: string
+          medical_record_id?: string
+          notes?: string | null
+          recommendations?: string[] | null
+          urgency_level?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_evaluations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_evaluations_medical_record_id_fkey"
+            columns: ["medical_record_id"]
+            isOneToOne: false
+            referencedRelation: "medical_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           accepts_insurance: boolean | null
@@ -182,6 +328,7 @@ export type Database = {
           ai_recommendations: string[] | null
           analyzed_at: string | null
           appointment_id: string | null
+          assigned_doctor_id: string | null
           barcode: string | null
           created_at: string | null
           data: Json | null
@@ -192,6 +339,7 @@ export type Database = {
           lab_id: string | null
           patient_id: string
           record_type: Database["public"]["Enums"]["record_type"]
+          review_status: string | null
           title: string
           urgency_level: string | null
         }
@@ -200,6 +348,7 @@ export type Database = {
           ai_recommendations?: string[] | null
           analyzed_at?: string | null
           appointment_id?: string | null
+          assigned_doctor_id?: string | null
           barcode?: string | null
           created_at?: string | null
           data?: Json | null
@@ -210,6 +359,7 @@ export type Database = {
           lab_id?: string | null
           patient_id: string
           record_type: Database["public"]["Enums"]["record_type"]
+          review_status?: string | null
           title: string
           urgency_level?: string | null
         }
@@ -218,6 +368,7 @@ export type Database = {
           ai_recommendations?: string[] | null
           analyzed_at?: string | null
           appointment_id?: string | null
+          assigned_doctor_id?: string | null
           barcode?: string | null
           created_at?: string | null
           data?: Json | null
@@ -228,6 +379,7 @@ export type Database = {
           lab_id?: string | null
           patient_id?: string
           record_type?: Database["public"]["Enums"]["record_type"]
+          review_status?: string | null
           title?: string
           urgency_level?: string | null
         }
@@ -237,6 +389,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_assigned_doctor_id_fkey"
+            columns: ["assigned_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
           {
