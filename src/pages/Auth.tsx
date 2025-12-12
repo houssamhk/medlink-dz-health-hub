@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, Mail, Lock, User, ArrowLeft, Loader2 } from 'lucide-react';
+import { Heart, Mail, Lock, User, ArrowLeft, Loader2, Stethoscope, UserCircle } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('البريد الإلكتروني غير صالح');
@@ -16,6 +18,7 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [accountType, setAccountType] = useState<'patient' | 'doctor'>('patient');
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -23,9 +26,26 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      checkUserRoleAndRedirect();
     }
-  }, [user, navigate]);
+  }, [user]);
+
+  const checkUserRoleAndRedirect = async () => {
+    if (!user) return;
+    
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    
+    const isDoctor = roles?.some(r => r.role === 'doctor');
+    
+    if (isDoctor) {
+      navigate('/doctor-dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   const validateForm = () => {
     try {
@@ -77,7 +97,6 @@ const Auth = () => {
             title: 'مرحباً بك!',
             description: 'تم تسجيل الدخول بنجاح',
           });
-          navigate('/');
         }
       } else {
         const { error } = await signUp(email, password, fullName);
@@ -92,13 +111,83 @@ const Auth = () => {
             variant: 'destructive',
           });
         } else {
-          toast({
-            title: 'تم إنشاء الحساب!',
-            description: 'مرحباً بك في MEDLINK DZ',
-          });
-          navigate('/');
+          // إذا كان طبيب، أضف الدور وأنشئ سجل الطبيب
+          if (accountType === 'doctor') {
+            // سيتم إنشاء سجل الطبيب بعد تأكيد الحساب
+            toast({
+              title: 'تم إنشاء الحساب!',
+              description: 'سيتم تفعيل حسابك كطبيب بعد التحقق',
+            });
+          } else {
+            toast({
+              title: 'تم إنشاء الحساب!',
+              description: 'مرحباً بك في MEDLINK DZ',
+            });
+          }
         }
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUpWithRole = async () => {
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+            account_type: accountType,
+          },
+        },
+      });
+
+      if (error) {
+        let message = 'حدث خطأ أثناء إنشاء الحساب';
+        if (error.message.includes('already registered')) {
+          message = 'هذا البريد الإلكتروني مسجل بالفعل';
+        }
+        toast({
+          title: 'خطأ',
+          description: message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data.user && accountType === 'doctor') {
+        // تحديث الدور للطبيب
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .update({ role: 'doctor' })
+          .eq('user_id', data.user.id);
+
+        if (!roleError) {
+          // إنشاء سجل الطبيب
+          await supabase.from('doctors').insert({
+            user_id: data.user.id,
+            wilaya: 'الجزائر',
+            is_verified: false,
+          });
+        }
+      }
+
+      toast({
+        title: 'تم إنشاء الحساب!',
+        description: accountType === 'doctor' 
+          ? 'مرحباً بك! يمكنك الآن إكمال ملفك الشخصي كطبيب'
+          : 'مرحباً بك في MEDLINK DZ',
+      });
+
     } finally {
       setIsLoading(false);
     }
@@ -138,23 +227,56 @@ const Auth = () => {
           </p>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={(e) => { e.preventDefault(); isLogin ? handleSubmit(e) : handleSignUpWithRole(); }} className="space-y-5">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-foreground">الاسم الكامل</Label>
-                <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="محمد أحمد"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="pr-11 text-right"
-                    dir="rtl"
-                  />
+              <>
+                {/* Account Type Selection */}
+                <div className="space-y-3">
+                  <Label className="text-foreground">نوع الحساب</Label>
+                  <RadioGroup
+                    value={accountType}
+                    onValueChange={(v) => setAccountType(v as 'patient' | 'doctor')}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <div className={`flex flex-col items-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${
+                      accountType === 'patient' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    }`}>
+                      <RadioGroupItem value="patient" id="patient" className="sr-only" />
+                      <label htmlFor="patient" className="cursor-pointer text-center">
+                        <UserCircle className={`h-8 w-8 mx-auto mb-2 ${accountType === 'patient' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <span className="font-medium">مريض</span>
+                        <p className="text-xs text-muted-foreground mt-1">للبحث عن أطباء وحجز مواعيد</p>
+                      </label>
+                    </div>
+                    <div className={`flex flex-col items-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${
+                      accountType === 'doctor' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    }`}>
+                      <RadioGroupItem value="doctor" id="doctor" className="sr-only" />
+                      <label htmlFor="doctor" className="cursor-pointer text-center">
+                        <Stethoscope className={`h-8 w-8 mx-auto mb-2 ${accountType === 'doctor' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <span className="font-medium">طبيب</span>
+                        <p className="text-xs text-muted-foreground mt-1">لإدارة المواعيد والمرضى</p>
+                      </label>
+                    </div>
+                  </RadioGroup>
                 </div>
-              </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-foreground">الاسم الكامل</Label>
+                  <div className="relative">
+                    <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="fullName"
+                      type="text"
+                      placeholder="د. محمد أحمد"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="pr-11 text-right"
+                      dir="rtl"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
@@ -195,7 +317,9 @@ const Auth = () => {
               ) : isLogin ? (
                 'تسجيل الدخول'
               ) : (
-                'إنشاء الحساب'
+                <>
+                  {accountType === 'doctor' ? 'إنشاء حساب طبيب' : 'إنشاء حساب مريض'}
+                </>
               )}
             </Button>
           </form>
