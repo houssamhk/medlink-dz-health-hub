@@ -162,38 +162,40 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="border-border/50 gradient-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary" />
-                حجز موعد جديد
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                ابحث عن طبيب واحجز موعدك في ثوانٍ
-              </p>
-              <Button onClick={() => navigate('/doctors')}>
-                البحث عن طبيب
-              </Button>
+            <CardContent className="p-4">
+              <Heart className="w-8 h-8 text-primary mb-2" />
+              <h3 className="font-semibold mb-1">حجز موعد</h3>
+              <p className="text-sm text-muted-foreground mb-3">ابحث عن طبيب واحجز</p>
+              <Button size="sm" onClick={() => navigate('/doctors')}>البحث</Button>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 gradient-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-secondary" />
-                المساعد الطبي الذكي
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                اسأل مساعدنا الذكي عن أعراضك
-              </p>
-              <Button variant="secondary">
-                بدء المحادثة
-              </Button>
+            <CardContent className="p-4">
+              <FileText className="w-8 h-8 text-secondary mb-2" />
+              <h3 className="font-semibold mb-1">ملفي الطبي</h3>
+              <p className="text-sm text-muted-foreground mb-3">جميع سجلاتك الطبية</p>
+              <Button size="sm" variant="secondary" onClick={() => navigate('/medical-record')}>عرض</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 gradient-card">
+            <CardContent className="p-4">
+              <Activity className="w-8 h-8 text-accent mb-2" />
+              <h3 className="font-semibold mb-1">إرسال تحاليل</h3>
+              <p className="text-sm text-muted-foreground mb-3">أرسل لطبيب مختار</p>
+              <Button size="sm" variant="outline" onClick={() => navigate('/send-to-doctor')}>إرسال</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 gradient-card">
+            <CardContent className="p-4">
+              <Clock className="w-8 h-8 text-primary mb-2" />
+              <h3 className="font-semibold mb-1">رفع تحاليل</h3>
+              <p className="text-sm text-muted-foreground mb-3">تحليل سريع بالذكاء</p>
+              <Button size="sm" variant="outline" onClick={() => navigate('/lab-results')}>رفع</Button>
             </CardContent>
           </Card>
         </div>

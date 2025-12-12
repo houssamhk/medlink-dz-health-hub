@@ -13,6 +13,8 @@ import AITriage from "./pages/AITriage";
 import Pharmacies from "./pages/Pharmacies";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import BookAppointment from "./pages/BookAppointment";
+import MedicalRecord from "./pages/MedicalRecord";
+import SendToDoctor from "./pages/SendToDoctor";
 import SmartAssistant from "./components/SmartAssistant";
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/pharmacies" element={<Pharmacies />} />
             <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
             <Route path="/book-appointment" element={<BookAppointment />} />
+            <Route path="/medical-record" element={<MedicalRecord />} />
+            <Route path="/send-to-doctor" element={<SendToDoctor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />
