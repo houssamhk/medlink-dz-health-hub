@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
@@ -54,6 +55,7 @@ const WILAYAS = [
 const Doctors = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,11 +94,11 @@ const Doctors = () => {
       .eq('is_verified', true)
       .eq('is_available', true);
 
-    if (selectedWilaya) {
+    if (selectedWilaya && selectedWilaya !== 'all') {
       query = query.eq('wilaya', selectedWilaya);
     }
 
-    if (selectedSpecialty) {
+    if (selectedSpecialty && selectedSpecialty !== 'all') {
       query = query.eq('specialty_id', selectedSpecialty);
     }
 
@@ -114,21 +116,17 @@ const Doctors = () => {
     fetchDoctors();
   }, [selectedWilaya, selectedSpecialty]);
 
-  const handleBookAppointment = async (doctorId: string) => {
+  const handleBookAppointment = (doctorId: string) => {
     if (!user) {
       toast({
         title: 'تنبيه',
         description: 'يرجى تسجيل الدخول لحجز موعد',
         variant: 'destructive',
       });
+      navigate('/auth');
       return;
     }
-
-    // For now, show a success message - in a real app, this would open a booking modal
-    toast({
-      title: 'قريباً',
-      description: 'نظام الحجز قيد التطوير',
-    });
+    navigate(`/book-appointment?doctor=${doctorId}`);
   };
 
   const filteredDoctors = doctors.filter((doctor) => {
@@ -173,7 +171,7 @@ const Doctors = () => {
                 <SelectValue placeholder="اختر الولاية" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">جميع الولايات</SelectItem>
+                <SelectItem value="all">جميع الولايات</SelectItem>
                 {WILAYAS.map((wilaya) => (
                   <SelectItem key={wilaya} value={wilaya}>
                     {wilaya}
@@ -187,7 +185,7 @@ const Doctors = () => {
                 <SelectValue placeholder="اختر التخصص" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">جميع التخصصات</SelectItem>
+                <SelectItem value="all">جميع التخصصات</SelectItem>
                 {specialties.map((specialty) => (
                   <SelectItem key={specialty.id} value={specialty.id}>
                     {specialty.name_ar}

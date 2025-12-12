@@ -91,7 +91,7 @@ const LabResults = () => {
 
       setAnalysisResult(data);
 
-      // Save to medical records
+      // Save to medical records - status is pending for doctor review
       const { error: saveError } = await supabase.from('medical_records').insert({
         patient_id: user.id,
         title: `تحليل ${new Date().toLocaleDateString('ar-DZ')}`,
@@ -101,6 +101,7 @@ const LabResults = () => {
         ai_recommendations: data.recommendations,
         barcode: barcode || null,
         analyzed_at: new Date().toISOString(),
+        review_status: 'pending', // سيتم مراجعته من طبيب
       });
 
       if (saveError) {
@@ -108,8 +109,8 @@ const LabResults = () => {
       }
 
       toast({
-        title: "تم التحليل بنجاح",
-        description: "تم حفظ النتائج في سجلك الطبي",
+        title: "تم رفع التحليل بنجاح",
+        description: "سيتم مراجعة نتائجك من طبيب مختص قريباً",
       });
 
     } catch (error: any) {
@@ -142,9 +143,9 @@ const LabResults = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8" dir="rtl">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-foreground mb-2">تحليل النتائج المخبرية</h1>
-          <p className="text-muted-foreground mb-8">ارفع صورة تحاليلك أو أدخل النتائج يدوياً ليقوم الذكاء الاصطناعي بتحليلها</p>
+        <div className="max-w-4xl mx-auto pt-20">
+          <h1 className="text-3xl font-bold text-foreground mb-2">رفع التحاليل للمراجعة</h1>
+          <p className="text-muted-foreground mb-8">ارفع صورة تحاليلك ليقوم طبيب مختص بمراجعتها وتقييمها (الذكاء الاصطناعي يساعد في التصنيف الأولي فقط)</p>
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Upload Section */}
@@ -222,15 +223,19 @@ Cholesterol: 220 mg/dL`}
             {analyzing ? (
               <>
                 <Loader2 className="h-5 w-5 ml-2 animate-spin" />
-                جاري التحليل...
+                جاري الرفع...
               </>
             ) : (
               <>
-                <FileText className="h-5 w-5 ml-2" />
-                تحليل النتائج
+                <Upload className="h-5 w-5 ml-2" />
+                رفع للمراجعة الطبية
               </>
             )}
           </Button>
+
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            ⚠️ ملاحظة: سيتم مراجعة تحاليلك من طبيب مختص. التقييم الأولي بالذكاء الاصطناعي للتصنيف فقط.
+          </p>
 
           {/* Results Section */}
           {analysisResult && (
