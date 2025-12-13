@@ -1,19 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Stethoscope, User, LogOut } from "lucide-react";
+import { Menu, X, Stethoscope, User, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const [isDoctor, setIsDoctor] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkDoctorRole();
+    }
+  }, [user]);
+
+  const checkDoctorRole = async () => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user?.id)
+      .eq('role', 'doctor')
+      .maybeSingle();
+    
+    setIsDoctor(!!data);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -60,26 +81,42 @@ const Navbar = () => {
             {loading ? (
               <div className="w-24 h-10 bg-muted animate-pulse rounded-lg" />
             ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <User className="w-4 h-4" />
-                    <span className="max-w-24 truncate">
-                      {user.user_metadata?.full_name || user.email?.split('@')[0]}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                    <User className="w-4 h-4 mr-2" />
-                    لوحة التحكم
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    تسجيل الخروج
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <NotificationBell />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <User className="w-4 h-4" />
+                      <span className="max-w-24 truncate">
+                        {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <User className="w-4 h-4 mr-2" />
+                      لوحة التحكم
+                    </DropdownMenuItem>
+                    {isDoctor && (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate('/doctor-dashboard')}>
+                          <Stethoscope className="w-4 h-4 mr-2" />
+                          لوحة الطبيب
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/doctor-profile')}>
+                          <Settings className="w-4 h-4 mr-2" />
+                          إعدادات الملف
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      تسجيل الخروج
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
@@ -121,6 +158,16 @@ const Navbar = () => {
                     <Button variant="outline" className="w-full" onClick={() => { navigate('/dashboard'); setIsOpen(false); }}>
                       لوحة التحكم
                     </Button>
+                    {isDoctor && (
+                      <>
+                        <Button variant="outline" className="w-full" onClick={() => { navigate('/doctor-dashboard'); setIsOpen(false); }}>
+                          لوحة الطبيب
+                        </Button>
+                        <Button variant="outline" className="w-full" onClick={() => { navigate('/doctor-profile'); setIsOpen(false); }}>
+                          إعدادات الملف
+                        </Button>
+                      </>
+                    )}
                     <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>
                       تسجيل الخروج
                     </Button>
