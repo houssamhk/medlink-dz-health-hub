@@ -407,6 +407,48 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          phone_number: string | null
+          related_id: string | null
+          related_type: string | null
+          sms_sent: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          phone_number?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          sms_sent?: boolean | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          phone_number?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          sms_sent?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pharmacies: {
         Row: {
           address: string

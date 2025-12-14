@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Stethoscope, User, LogOut, Settings } from "lucide-react";
+import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -96,6 +96,14 @@ const Navbar = () => {
                     <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                       <User className="w-4 h-4 mr-2" />
                       لوحة التحكم
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/patient-profile')}>
+                      <UserCircle className="w-4 h-4 mr-2" />
+                      ملفي الشخصي
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/prescriptions')}>
+                      <Pill className="w-4 h-4 mr-2" />
+                      الوصفات الطبية
                     </DropdownMenuItem>
                     {isDoctor && (
                       <>
