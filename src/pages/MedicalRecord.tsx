@@ -3,14 +3,23 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { 
   FileText, Calendar, Clock, User, Stethoscope, 
   AlertTriangle, CheckCircle, Loader2, FlaskConical,
-  CalendarCheck, MessageSquare
+  CalendarCheck, MessageSquare, Star
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Navigate } from 'react-router-dom';
+import DoctorReviewForm from '@/components/DoctorReviewForm';
 
 interface MedicalRecordItem {
   id: string;
@@ -349,6 +358,32 @@ const MedicalRecord = () => {
                             {getAppointmentStatusBadge(apt.status)}
                           </div>
                         </div>
+                        
+                        {/* Review Button for Completed Appointments */}
+                        {apt.status === 'completed' && (
+                          <div className="mt-4 pt-4 border-t border-border">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" className="w-full gap-2">
+                                  <Star className="h-4 w-4" />
+                                  قيّم هذه الزيارة
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent dir="rtl">
+                                <DialogHeader>
+                                  <DialogTitle>تقييم الزيارة</DialogTitle>
+                                </DialogHeader>
+                                <DoctorReviewForm
+                                  doctorId={apt.doctors?.id}
+                                  appointmentId={apt.id}
+                                  doctorName={apt.doctors?.profiles?.full_name}
+                                  type="appointment"
+                                  onSuccess={() => {}}
+                                />
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))

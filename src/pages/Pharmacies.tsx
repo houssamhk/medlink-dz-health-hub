@@ -3,9 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, MapPin, Phone, Clock, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, MapPin, Phone, Clock, Search, Map, List } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import PharmacyMap from '@/components/PharmacyMap';
 
 interface Pharmacy {
   id: string;
@@ -14,6 +17,8 @@ interface Pharmacy {
   wilaya: string;
   phone: string | null;
   is_on_duty: boolean | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 const wilayas = [
@@ -107,45 +112,65 @@ const Pharmacies = () => {
           </button>
         </div>
 
-        {/* Pharmacies Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPharmacies.map((pharmacy) => (
-            <Card key={pharmacy.id} className={pharmacy.is_on_duty ? 'border-green-500 border-2' : ''}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{pharmacy.name}</CardTitle>
-                  {pharmacy.is_on_duty && (
-                    <Badge className="bg-green-500">مناوبة</Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-start gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4 mt-1 shrink-0" />
-                  <span className="text-sm">{pharmacy.address}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Badge variant="outline">{pharmacy.wilaya}</Badge>
-                </div>
-                {pharmacy.phone && (
-                  <a 
-                    href={`tel:${pharmacy.phone}`}
-                    className="flex items-center gap-2 text-primary hover:underline"
-                  >
-                    <Phone className="h-4 w-4" />
-                    <span dir="ltr">{pharmacy.phone}</span>
-                  </a>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Tabs for List/Map View */}
+        <Tabs defaultValue="list" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="list" className="gap-2">
+              <List className="h-4 w-4" />
+              قائمة
+            </TabsTrigger>
+            <TabsTrigger value="map" className="gap-2">
+              <Map className="h-4 w-4" />
+              خريطة
+            </TabsTrigger>
+          </TabsList>
 
-        {filteredPharmacies.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">لا توجد صيدليات مطابقة للبحث</p>
-          </div>
-        )}
+          <TabsContent value="list">
+            {/* Pharmacies Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredPharmacies.map((pharmacy) => (
+                <Card key={pharmacy.id} className={pharmacy.is_on_duty ? 'border-green-500 border-2' : ''}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{pharmacy.name}</CardTitle>
+                      {pharmacy.is_on_duty && (
+                        <Badge className="bg-green-500">مناوبة</Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-start gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4 mt-1 shrink-0" />
+                      <span className="text-sm">{pharmacy.address}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Badge variant="outline">{pharmacy.wilaya}</Badge>
+                    </div>
+                    {pharmacy.phone && (
+                      <a 
+                        href={`tel:${pharmacy.phone}`}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span dir="ltr">{pharmacy.phone}</span>
+                      </a>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {filteredPharmacies.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">لا توجد صيدليات مطابقة للبحث</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="map">
+            <PharmacyMap pharmacies={filteredPharmacies} />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
