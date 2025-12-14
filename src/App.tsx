@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import EmergencySOS from "@/components/EmergencySOS";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,6 +18,9 @@ import MedicalRecord from "./pages/MedicalRecord";
 import SendToDoctor from "./pages/SendToDoctor";
 import DoctorProfile from "./pages/DoctorProfile";
 import LabDashboard from "./pages/LabDashboard";
+import PatientProfile from "./pages/PatientProfile";
+import Prescriptions from "./pages/Prescriptions";
+import PaymentPage from "./pages/PaymentPage";
 import SmartAssistant from "./components/SmartAssistant";
 import NotFound from "./pages/NotFound";
 
@@ -43,9 +47,13 @@ const App = () => (
             <Route path="/send-to-doctor" element={<SendToDoctor />} />
             <Route path="/doctor-profile" element={<DoctorProfile />} />
             <Route path="/lab-dashboard" element={<LabDashboard />} />
+            <Route path="/patient-profile" element={<PatientProfile />} />
+            <Route path="/prescriptions" element={<Prescriptions />} />
+            <Route path="/payment" element={<PaymentPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />
+          <EmergencySOS />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
