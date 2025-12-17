@@ -322,6 +322,51 @@ export type Database = {
           },
         ]
       }
+      family_members: {
+        Row: {
+          allergies: string[] | null
+          blood_type: string | null
+          can_book_appointments: boolean | null
+          chronic_conditions: string[] | null
+          created_at: string
+          date_of_birth: string | null
+          gender: string | null
+          id: string
+          member_name: string
+          primary_user_id: string
+          relationship: string
+          updated_at: string
+        }
+        Insert: {
+          allergies?: string[] | null
+          blood_type?: string | null
+          can_book_appointments?: boolean | null
+          chronic_conditions?: string[] | null
+          created_at?: string
+          date_of_birth?: string | null
+          gender?: string | null
+          id?: string
+          member_name: string
+          primary_user_id: string
+          relationship: string
+          updated_at?: string
+        }
+        Update: {
+          allergies?: string[] | null
+          blood_type?: string | null
+          can_book_appointments?: boolean | null
+          chronic_conditions?: string[] | null
+          created_at?: string
+          date_of_birth?: string | null
+          gender?: string | null
+          id?: string
+          member_name?: string
+          primary_user_id?: string
+          relationship?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medical_records: {
         Row: {
           ai_analysis: string | null
@@ -617,6 +662,90 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      telemedicine_sessions: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          doctor_id: string
+          ended_at: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          scheduled_at: string
+          session_token: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          doctor_id: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          scheduled_at: string
+          session_token?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          doctor_id?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          scheduled_at?: string
+          session_token?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telemedicine_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemedicine_sessions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -637,7 +766,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      platform_stats: {
+        Row: {
+          completed_appointments: number | null
+          total_appointments: number | null
+          total_pharmacies: number | null
+          total_records: number | null
+          total_users: number | null
+          verified_doctors: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
