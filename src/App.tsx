@@ -21,6 +21,9 @@ import LabDashboard from "./pages/LabDashboard";
 import PatientProfile from "./pages/PatientProfile";
 import Prescriptions from "./pages/Prescriptions";
 import PaymentPage from "./pages/PaymentPage";
+import AdminDashboard from "./pages/AdminDashboard";
+import FamilyMembers from "./pages/FamilyMembers";
+import Telemedicine from "./pages/Telemedicine";
 import SmartAssistant from "./components/SmartAssistant";
 import NotFound from "./pages/NotFound";
 
@@ -50,6 +53,9 @@ const App = () => (
             <Route path="/patient-profile" element={<PatientProfile />} />
             <Route path="/prescriptions" element={<Prescriptions />} />
             <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/family" element={<FamilyMembers />} />
+            <Route path="/telemedicine" element={<Telemedicine />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />

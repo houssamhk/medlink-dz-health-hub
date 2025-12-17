@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle } from "lucide-react";
+import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle, Users, Video, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,10 +18,12 @@ const Navbar = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [isDoctor, setIsDoctor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (user) {
       checkDoctorRole();
+      checkAdminRole();
     }
   }, [user]);
 
@@ -34,6 +36,17 @@ const Navbar = () => {
       .maybeSingle();
     
     setIsDoctor(!!data);
+  };
+
+  const checkAdminRole = async () => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user?.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+    
+    setIsAdmin(!!data);
   };
 
   const handleSignOut = async () => {
@@ -105,6 +118,14 @@ const Navbar = () => {
                       <Pill className="w-4 h-4 mr-2" />
                       الوصفات الطبية
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/family')}>
+                      <Users className="w-4 h-4 mr-2" />
+                      أفراد العائلة
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/telemedicine')}>
+                      <Video className="w-4 h-4 mr-2" />
+                      الطب عن بعد
+                    </DropdownMenuItem>
                     {isDoctor && (
                       <>
                         <DropdownMenuItem onClick={() => navigate('/doctor-dashboard')}>
@@ -116,6 +137,12 @@ const Navbar = () => {
                           إعدادات الملف
                         </DropdownMenuItem>
                       </>
+                    )}
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Shield className="w-4 h-4 mr-2" />
+                        لوحة الإدارة
+                      </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
