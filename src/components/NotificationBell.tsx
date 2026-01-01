@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+import { Bell, CheckCircle, AlertTriangle, Info, CheckCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface Notification {
   id: string;
@@ -26,20 +27,48 @@ interface Notification {
 const NotificationBell = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
 
-  useEffect(() => {
-    if (user) {
-      fetchNotifications();
+  // Request browser notification permission
+  const requestPermission = useCallback(async () => {
+    if (!('Notification' in window)) return false;
+    
+    if (Notification.permission === 'granted') {
+      setPermission('granted');
+      return true;
     }
-  }, [user]);
+    
+    if (Notification.permission !== 'denied') {
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      return result === 'granted';
+    }
+    
+    setPermission('denied');
+    return false;
+  }, []);
 
-  const fetchNotifications = async () => {
+  // Show browser notification
+  const showBrowserNotification = useCallback((title: string, body: string) => {
+    if (permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: 'sehatech-notification',
+      });
+    }
+  }, [permission]);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    
     const { data, error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .select('*')
-      .eq('user_id', user?.id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -48,12 +77,49 @@ const NotificationBell = () => {
       setNotifications(notifs);
       setUnreadCount(notifs.filter(n => !n.is_read).length);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      requestPermission();
+
+      // Subscribe to realtime notifications
+      const channel = supabase
+        .channel('notifications-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = payload.new as Notification;
+            setNotifications(prev => [newNotification, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            
+            toast({
+              title: newNotification.title,
+              description: newNotification.message,
+            });
+
+            showBrowserNotification(newNotification.title, newNotification.message);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user, fetchNotifications, requestPermission, showBrowserNotification, toast]);
 
   const markAsRead = async (id: string) => {
     await supabase
-      .from('notifications' as any)
-      .update({ is_read: true } as any)
+      .from('notifications')
+      .update({ is_read: true })
       .eq('id', id);
 
     setNotifications(prev => 
@@ -64,8 +130,8 @@ const NotificationBell = () => {
 
   const markAllAsRead = async () => {
     await supabase
-      .from('notifications' as any)
-      .update({ is_read: true } as any)
+      .from('notifications')
+      .update({ is_read: true })
       .eq('user_id', user?.id)
       .eq('is_read', false);
 
@@ -79,12 +145,15 @@ const NotificationBell = () => {
       navigate('/medical-record');
     } else if (notification.related_type === 'medical_record') {
       navigate('/doctor-dashboard');
+    } else if (notification.related_type === 'appointment') {
+      navigate('/dashboard');
     }
   };
 
   const getIcon = (type: string) => {
     switch (type) {
       case 'critical':
+      case 'emergency':
         return <AlertTriangle className="h-4 w-4 text-destructive" />;
       case 'warning':
         return <AlertTriangle className="h-4 w-4 text-orange-500" />;
@@ -123,11 +192,19 @@ const NotificationBell = () => {
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-4 py-2 border-b" dir="rtl">
           <span className="font-semibold">الإشعارات</span>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-              تحديد الكل كمقروء
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {permission === 'default' && (
+              <Button variant="ghost" size="sm" onClick={requestPermission} className="text-xs">
+                تفعيل التنبيهات
+              </Button>
+            )}
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs">
+                <CheckCheck className="h-3 w-3 ml-1" />
+                تحديد الكل
+              </Button>
+            )}
+          </div>
         </div>
         <div className="max-h-96 overflow-y-auto" dir="rtl">
           {notifications.length === 0 ? (
