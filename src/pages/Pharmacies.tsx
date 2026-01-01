@@ -73,7 +73,7 @@ const Pharmacies = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8" dir="rtl">
+      <main className="container mx-auto px-4 py-8 pt-24" dir="rtl">
         <h1 className="text-3xl font-bold text-foreground mb-2">الصيدليات المناوبة</h1>
         <p className="text-muted-foreground mb-8">ابحث عن الصيدليات المناوبة القريبة منك</p>
 

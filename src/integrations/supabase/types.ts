@@ -322,6 +322,45 @@ export type Database = {
           },
         ]
       }
+      emergency_requests: {
+        Row: {
+          created_at: string
+          description: string | null
+          emergency_type: string
+          id: string
+          latitude: number
+          longitude: number
+          responded_at: string | null
+          responder_notes: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          emergency_type: string
+          id?: string
+          latitude: number
+          longitude: number
+          responded_at?: string | null
+          responder_notes?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          emergency_type?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          responded_at?: string | null
+          responder_notes?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       family_members: {
         Row: {
           allergies: string[] | null
