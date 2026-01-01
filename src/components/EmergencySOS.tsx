@@ -80,29 +80,44 @@ const EmergencySOS = () => {
 
     setLoading(true);
     try {
-      const { error } = await (supabase as any).from('emergency_requests').insert({
-        user_id: user.id,
-        latitude: location.lat,
-        longitude: location.lng,
-        emergency_type: emergencyType,
-        description: description,
-        status: 'pending'
-      });
+      // Insert emergency request
+      const { error: requestError } = await supabase
+        .from('emergency_requests' as any)
+        .insert({
+          user_id: user.id,
+          latitude: location.lat,
+          longitude: location.lng,
+          emergency_type: emergencyType,
+          description: description,
+          status: 'pending'
+        });
 
-      if (error) throw error;
+      if (requestError) throw requestError;
+
+      // Create notification for user
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: 'طلب طوارئ',
+          message: 'تم إرسال طلب الطوارئ بنجاح. سيتم التواصل معك قريباً.',
+          type: 'emergency',
+          related_type: 'emergency'
+        });
 
       toast({
         title: "تم إرسال طلب الطوارئ",
-        description: "سيتم التواصل معك قريباً",
+        description: "سيتم التواصل معك قريباً. للطوارئ الفورية اتصل بـ 14",
       });
       setIsOpen(false);
       setLocation(null);
       setEmergencyType('');
       setDescription('');
     } catch (error: any) {
+      console.error('Emergency request error:', error);
       toast({
         title: "خطأ",
-        description: error.message,
+        description: "حدث خطأ. للطوارئ الفورية اتصل بـ 14 أو 1021",
         variant: "destructive",
       });
     } finally {
