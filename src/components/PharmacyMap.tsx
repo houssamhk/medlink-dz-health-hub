@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, Navigation, AlertCircle, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, AlertCircle, Loader2, Route, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface PharmacyLocation {
@@ -22,9 +21,12 @@ const PharmacyMap = ({ pharmacies }: PharmacyMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const routeLayerRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<PharmacyLocation | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
   const { toast } = useToast();
 
   // Default center: Algiers
@@ -152,11 +154,30 @@ const PharmacyMap = ({ pharmacies }: PharmacyMapProps) => {
             <p class="text-xs mt-1 font-medium ${pharmacy.is_on_duty ? 'text-green-600' : 'text-red-600'}">
               ${pharmacy.is_on_duty ? '🟢 مناوبة' : '🔴 مغلقة'}
             </p>
+            <button 
+              onclick="window.dispatchEvent(new CustomEvent('showRoute', { detail: '${pharmacy.id}' }))"
+              class="mt-2 w-full bg-blue-500 text-white text-xs py-1 px-2 rounded hover:bg-blue-600"
+            >
+              عرض المسار
+            </button>
           </div>
         `);
       markersRef.current.push(marker);
     });
   }, [pharmacies, userLocation, mapLoaded]);
+
+  // Listen for route events
+  useEffect(() => {
+    const handleShowRoute = (e: CustomEvent) => {
+      const pharmacy = pharmacies.find(p => p.id === e.detail);
+      if (pharmacy) {
+        drawRoute(pharmacy);
+      }
+    };
+
+    window.addEventListener('showRoute', handleShowRoute as EventListener);
+    return () => window.removeEventListener('showRoute', handleShowRoute as EventListener);
+  }, [pharmacies, userLocation]);
 
   // Fly to user location when it changes
   useEffect(() => {
@@ -205,6 +226,105 @@ const PharmacyMap = ({ pharmacies }: PharmacyMapProps) => {
     );
   };
 
+  const drawRoute = async (destination: PharmacyLocation) => {
+    if (!userLocation) {
+      toast({
+        title: "تنبيه",
+        description: "يرجى تحديد موقعك أولاً",
+        variant: "destructive"
+      });
+      getUserLocation();
+      return;
+    }
+
+    if (!destination.latitude || !destination.longitude) {
+      toast({
+        title: "خطأ",
+        description: "لا تتوفر إحداثيات لهذه الوجهة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setRouteLoading(true);
+    setSelectedDestination(destination);
+
+    const L = (window as any).L;
+    if (!L || !mapInstanceRef.current) {
+      setRouteLoading(false);
+      return;
+    }
+
+    // Remove existing route
+    if (routeLayerRef.current) {
+      mapInstanceRef.current.removeLayer(routeLayerRef.current);
+    }
+
+    try {
+      // Use OSRM for routing (free and open source)
+      const response = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${userLocation[1]},${userLocation[0]};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`
+      );
+      
+      const data = await response.json();
+      
+      if (data.code === 'Ok' && data.routes && data.routes[0]) {
+        const route = data.routes[0];
+        const coordinates = route.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+        
+        // Draw the route
+        const routeLine = L.polyline(coordinates, {
+          color: '#3b82f6',
+          weight: 5,
+          opacity: 0.8,
+        }).addTo(mapInstanceRef.current);
+        
+        routeLayerRef.current = routeLine;
+        
+        // Fit bounds to show entire route
+        mapInstanceRef.current.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+        
+        // Calculate distance and duration
+        const distanceKm = (route.distance / 1000).toFixed(1);
+        const durationMin = Math.round(route.duration / 60);
+        
+        toast({
+          title: `المسار إلى ${destination.name}`,
+          description: `المسافة: ${distanceKm} كم | الوقت: ${durationMin} دقيقة`,
+        });
+      } else {
+        throw new Error('Route not found');
+      }
+    } catch (error) {
+      console.error('Error fetching route:', error);
+      
+      // Fallback: Draw a straight line
+      const straightLine = L.polyline(
+        [userLocation, [destination.latitude, destination.longitude]],
+        { color: '#3b82f6', weight: 3, opacity: 0.6, dashArray: '10, 10' }
+      ).addTo(mapInstanceRef.current);
+      
+      routeLayerRef.current = straightLine;
+      mapInstanceRef.current.fitBounds(straightLine.getBounds(), { padding: [50, 50] });
+      
+      toast({
+        title: "تنبيه",
+        description: "تم رسم خط مستقيم - المسار الفعلي قد يختلف",
+      });
+    } finally {
+      setRouteLoading(false);
+    }
+  };
+
+  const clearRoute = () => {
+    const L = (window as any).L;
+    if (routeLayerRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = null;
+    }
+    setSelectedDestination(null);
+  };
+
   const pharmaciesWithLocation = pharmacies.filter(p => p.latitude && p.longitude);
 
   return (
@@ -224,7 +344,8 @@ const PharmacyMap = ({ pharmacies }: PharmacyMapProps) => {
         </div>
       )}
       
-      <div className="absolute top-4 right-4 z-[1000]">
+      {/* Controls */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
         <Button 
           variant="secondary" 
           size="sm"
@@ -234,8 +355,39 @@ const PharmacyMap = ({ pharmacies }: PharmacyMapProps) => {
           <Navigation className="h-4 w-4 ml-2" />
           موقعي
         </Button>
+        
+        {selectedDestination && (
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={clearRoute}
+            className="shadow-lg"
+          >
+            <X className="h-4 w-4 ml-2" />
+            إلغاء المسار
+          </Button>
+        )}
       </div>
 
+      {/* Route Loading Indicator */}
+      {routeLoading && (
+        <div className="absolute top-4 left-4 z-[1000] bg-background/90 p-3 rounded-lg shadow flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <span className="text-sm">جاري حساب المسار...</span>
+        </div>
+      )}
+
+      {/* Route Info */}
+      {selectedDestination && !routeLoading && (
+        <div className="absolute top-4 left-4 z-[1000] bg-background/90 p-3 rounded-lg shadow" dir="rtl">
+          <div className="flex items-center gap-2 text-sm">
+            <Route className="h-4 w-4 text-primary" />
+            <span className="font-medium">المسار إلى: {selectedDestination.name}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Legend */}
       <div className="absolute bottom-4 right-4 z-[1000] bg-background/90 p-2 rounded-lg shadow text-xs" dir="rtl">
         <div className="flex items-center gap-2 mb-1">
           <div className="h-3 w-3 rounded-full bg-green-500" />

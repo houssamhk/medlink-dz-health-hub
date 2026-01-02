@@ -159,6 +159,71 @@ export type Database = {
           },
         ]
       }
+      clinics: {
+        Row: {
+          address: string | null
+          bio: string | null
+          consultation_price: number | null
+          created_at: string | null
+          id: string
+          is_available: boolean | null
+          is_verified: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          phone: string | null
+          specialty_id: string | null
+          updated_at: string | null
+          user_id: string
+          wilaya: string
+          working_hours: Json | null
+        }
+        Insert: {
+          address?: string | null
+          bio?: string | null
+          consultation_price?: number | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          is_verified?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          phone?: string | null
+          specialty_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          wilaya?: string
+          working_hours?: Json | null
+        }
+        Update: {
+          address?: string | null
+          bio?: string | null
+          consultation_price?: number | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          is_verified?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          phone?: string | null
+          specialty_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          wilaya?: string
+          working_hours?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinics_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_capacity: {
         Row: {
           created_at: string
@@ -536,6 +601,8 @@ export type Database = {
       pharmacies: {
         Row: {
           address: string
+          clinic_latitude: number | null
+          clinic_longitude: number | null
           created_at: string | null
           duty_date: string | null
           id: string
@@ -551,6 +618,8 @@ export type Database = {
         }
         Insert: {
           address: string
+          clinic_latitude?: number | null
+          clinic_longitude?: number | null
           created_at?: string | null
           duty_date?: string | null
           id?: string
@@ -566,6 +635,8 @@ export type Database = {
         }
         Update: {
           address?: string
+          clinic_latitude?: number | null
+          clinic_longitude?: number | null
           created_at?: string | null
           duty_date?: string | null
           id?: string

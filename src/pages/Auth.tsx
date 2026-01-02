@@ -7,20 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, Mail, Lock, User, ArrowLeft, Loader2, Stethoscope, UserCircle } from 'lucide-react';
+import { Heart, Mail, Lock, User, ArrowLeft, Loader2, Stethoscope, UserCircle, Building, Pill } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('البريد الإلكتروني غير صالح');
 const passwordSchema = z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+
+type AccountType = 'patient' | 'doctor' | 'clinic' | 'pharmacist';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [accountType, setAccountType] = useState<'patient' | 'doctor'>('patient');
+  const [accountType, setAccountType] = useState<AccountType>('patient');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -39,9 +41,12 @@ const Auth = () => {
       .eq('user_id', user.id);
     
     const isDoctor = roles?.some(r => r.role === 'doctor');
+    const isPharmacist = roles?.some(r => r.role === 'pharmacist');
     
     if (isDoctor) {
       navigate('/doctor-dashboard');
+    } else if (isPharmacist) {
+      navigate('/pharmacy-profile');
     } else {
       navigate('/dashboard');
     }
@@ -72,66 +77,33 @@ const Auth = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
     
     setIsLoading(true);
-
-    try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) {
-          let message = 'حدث خطأ أثناء تسجيل الدخول';
-          if (error.message.includes('Invalid login credentials')) {
-            message = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-          }
-          toast({
-            title: 'خطأ',
-            description: message,
-            variant: 'destructive',
-          });
-        } else {
-          toast({
-            title: 'مرحباً بك!',
-            description: 'تم تسجيل الدخول بنجاح',
-          });
-        }
-      } else {
-        const { error } = await signUp(email, password, fullName);
-        if (error) {
-          let message = 'حدث خطأ أثناء إنشاء الحساب';
-          if (error.message.includes('already registered')) {
-            message = 'هذا البريد الإلكتروني مسجل بالفعل';
-          }
-          toast({
-            title: 'خطأ',
-            description: message,
-            variant: 'destructive',
-          });
-        } else {
-          // إذا كان طبيب، أضف الدور وأنشئ سجل الطبيب
-          if (accountType === 'doctor') {
-            // سيتم إنشاء سجل الطبيب بعد تأكيد الحساب
-            toast({
-              title: 'تم إنشاء الحساب!',
-              description: 'سيتم تفعيل حسابك كطبيب بعد التحقق',
-            });
-          } else {
-            toast({
-              title: 'تم إنشاء الحساب!',
-              description: 'مرحباً بك في MEDLINK DZ',
-            });
-          }
-        }
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      let message = 'حدث خطأ أثناء تسجيل الدخول';
+      if (error.message.includes('Invalid login credentials')) {
+        message = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
       }
-    } finally {
-      setIsLoading(false);
+      toast({
+        title: 'خطأ',
+        description: message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'مرحباً بك!',
+        description: 'تم تسجيل الدخول بنجاح',
+      });
     }
+    setIsLoading(false);
   };
 
-  const handleSignUpWithRole = async () => {
+  const handleSignUp = async () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
@@ -164,34 +136,95 @@ const Auth = () => {
         return;
       }
 
-      if (data.user && accountType === 'doctor') {
-        // تحديث الدور للطبيب
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .update({ role: 'doctor' })
-          .eq('user_id', data.user.id);
+      if (data.user) {
+        // Set appropriate role based on account type
+        let role: 'patient' | 'doctor' | 'pharmacist' = 'patient';
+        if (accountType === 'doctor' || accountType === 'clinic') {
+          role = 'doctor';
+        } else if (accountType === 'pharmacist') {
+          role = 'pharmacist';
+        }
 
-        if (!roleError) {
-          // إنشاء سجل الطبيب
+        if (role !== 'patient') {
+          await supabase
+            .from('user_roles')
+            .update({ role })
+            .eq('user_id', data.user.id);
+        }
+
+        // Create appropriate profile based on account type
+        if (accountType === 'doctor') {
           await supabase.from('doctors').insert({
             user_id: data.user.id,
             wilaya: 'الجزائر',
             is_verified: false,
           });
+        } else if (accountType === 'clinic') {
+          await supabase.from('clinics').insert({
+            user_id: data.user.id,
+            name: fullName,
+            wilaya: 'الجزائر',
+            is_verified: false,
+          });
+          // Also create doctor record for clinic
+          await supabase.from('doctors').insert({
+            user_id: data.user.id,
+            wilaya: 'الجزائر',
+            is_verified: false,
+          });
+        } else if (accountType === 'pharmacist') {
+          await supabase.from('pharmacies').insert({
+            user_id: data.user.id,
+            name: fullName,
+            address: '',
+            wilaya: 'الجزائر',
+          });
         }
       }
 
+      const successMessages: Record<AccountType, string> = {
+        patient: 'مرحباً بك في MEDLINK DZ',
+        doctor: 'مرحباً بك! يمكنك الآن إكمال ملفك الشخصي كطبيب',
+        clinic: 'مرحباً بك! يمكنك الآن إكمال بيانات عيادتك',
+        pharmacist: 'مرحباً بك! يمكنك الآن إكمال بيانات صيدليتك',
+      };
+
       toast({
         title: 'تم إنشاء الحساب!',
-        description: accountType === 'doctor' 
-          ? 'مرحباً بك! يمكنك الآن إكمال ملفك الشخصي كطبيب'
-          : 'مرحباً بك في MEDLINK DZ',
+        description: successMessages[accountType],
       });
 
     } finally {
       setIsLoading(false);
     }
   };
+
+  const accountTypeOptions = [
+    {
+      value: 'patient',
+      icon: UserCircle,
+      label: 'مريض',
+      description: 'للبحث عن أطباء وحجز مواعيد',
+    },
+    {
+      value: 'doctor',
+      icon: Stethoscope,
+      label: 'طبيب',
+      description: 'لإدارة المواعيد والمرضى',
+    },
+    {
+      value: 'clinic',
+      icon: Building,
+      label: 'عيادة',
+      description: 'لإدارة عيادة طبية متكاملة',
+    },
+    {
+      value: 'pharmacist',
+      icon: Pill,
+      label: 'صيدلية',
+      description: 'لعرض صيدليتك على الخريطة',
+    },
+  ];
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
@@ -227,7 +260,7 @@ const Auth = () => {
           </p>
 
           {/* Form */}
-          <form onSubmit={(e) => { e.preventDefault(); isLogin ? handleSubmit(e) : handleSignUpWithRole(); }} className="space-y-5">
+          <form onSubmit={(e) => { e.preventDefault(); isLogin ? handleLogin(e) : handleSignUp(); }} className="space-y-5">
             {!isLogin && (
               <>
                 {/* Account Type Selection */}
@@ -235,40 +268,48 @@ const Auth = () => {
                   <Label className="text-foreground">نوع الحساب</Label>
                   <RadioGroup
                     value={accountType}
-                    onValueChange={(v) => setAccountType(v as 'patient' | 'doctor')}
-                    className="grid grid-cols-2 gap-4"
+                    onValueChange={(v) => setAccountType(v as AccountType)}
+                    className="grid grid-cols-2 gap-3"
                   >
-                    <div className={`flex flex-col items-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${
-                      accountType === 'patient' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                    }`}>
-                      <RadioGroupItem value="patient" id="patient" className="sr-only" />
-                      <label htmlFor="patient" className="cursor-pointer text-center">
-                        <UserCircle className={`h-8 w-8 mx-auto mb-2 ${accountType === 'patient' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        <span className="font-medium">مريض</span>
-                        <p className="text-xs text-muted-foreground mt-1">للبحث عن أطباء وحجز مواعيد</p>
-                      </label>
-                    </div>
-                    <div className={`flex flex-col items-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${
-                      accountType === 'doctor' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                    }`}>
-                      <RadioGroupItem value="doctor" id="doctor" className="sr-only" />
-                      <label htmlFor="doctor" className="cursor-pointer text-center">
-                        <Stethoscope className={`h-8 w-8 mx-auto mb-2 ${accountType === 'doctor' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        <span className="font-medium">طبيب</span>
-                        <p className="text-xs text-muted-foreground mt-1">لإدارة المواعيد والمرضى</p>
-                      </label>
-                    </div>
+                    {accountTypeOptions.map((option) => (
+                      <div 
+                        key={option.value}
+                        className={`flex flex-col items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
+                          accountType === option.value 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <RadioGroupItem value={option.value} id={option.value} className="sr-only" />
+                        <label htmlFor={option.value} className="cursor-pointer text-center w-full">
+                          <option.icon className={`h-7 w-7 mx-auto mb-1 ${
+                            accountType === option.value ? 'text-primary' : 'text-muted-foreground'
+                          }`} />
+                          <span className="font-medium text-sm">{option.label}</span>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{option.description}</p>
+                        </label>
+                      </div>
+                    ))}
                   </RadioGroup>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-foreground">الاسم الكامل</Label>
+                  <Label htmlFor="fullName" className="text-foreground">
+                    {accountType === 'clinic' ? 'اسم العيادة' : 
+                     accountType === 'pharmacist' ? 'اسم الصيدلية' : 
+                     'الاسم الكامل'}
+                  </Label>
                   <div className="relative">
                     <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="fullName"
                       type="text"
-                      placeholder="د. محمد أحمد"
+                      placeholder={
+                        accountType === 'doctor' ? 'د. محمد أحمد' :
+                        accountType === 'clinic' ? 'عيادة الشفاء' :
+                        accountType === 'pharmacist' ? 'صيدلية النجاح' :
+                        'الاسم الكامل'
+                      }
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       className="pr-11 text-right"
@@ -318,7 +359,10 @@ const Auth = () => {
                 'تسجيل الدخول'
               ) : (
                 <>
-                  {accountType === 'doctor' ? 'إنشاء حساب طبيب' : 'إنشاء حساب مريض'}
+                  {accountType === 'patient' && 'إنشاء حساب مريض'}
+                  {accountType === 'doctor' && 'إنشاء حساب طبيب'}
+                  {accountType === 'clinic' && 'إنشاء حساب عيادة'}
+                  {accountType === 'pharmacist' && 'إنشاء حساب صيدلية'}
                 </>
               )}
             </Button>

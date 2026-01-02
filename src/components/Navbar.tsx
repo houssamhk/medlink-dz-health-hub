@@ -19,34 +19,23 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isDoctor, setIsDoctor] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPharmacist, setIsPharmacist] = useState(false);
 
   useEffect(() => {
     if (user) {
-      checkDoctorRole();
-      checkAdminRole();
+      checkRoles();
     }
   }, [user]);
 
-  const checkDoctorRole = async () => {
+  const checkRoles = async () => {
     const { data } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user?.id)
-      .eq('role', 'doctor')
-      .maybeSingle();
+      .eq('user_id', user?.id);
     
-    setIsDoctor(!!data);
-  };
-
-  const checkAdminRole = async () => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-    
-    setIsAdmin(!!data);
+    setIsDoctor(data?.some(r => r.role === 'doctor') ?? false);
+    setIsAdmin(data?.some(r => r.role === 'admin') ?? false);
+    setIsPharmacist(data?.some(r => r.role === 'pharmacist') ?? false);
   };
 
   const handleSignOut = async () => {
