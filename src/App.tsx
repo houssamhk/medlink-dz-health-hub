@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import PermissionPrompt from "@/components/PermissionPrompt";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +25,8 @@ import PaymentPage from "./pages/PaymentPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import FamilyMembers from "./pages/FamilyMembers";
 import Telemedicine from "./pages/Telemedicine";
+import PharmacyProfile from "./pages/PharmacyProfile";
+import ClinicProfile from "./pages/ClinicProfile";
 import SmartAssistant from "./components/SmartAssistant";
 import NotFound from "./pages/NotFound";
 
@@ -36,6 +39,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <PermissionPrompt />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -56,6 +60,8 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/family" element={<FamilyMembers />} />
             <Route path="/telemedicine" element={<Telemedicine />} />
+            <Route path="/pharmacy-profile" element={<PharmacyProfile />} />
+            <Route path="/clinic-profile" element={<ClinicProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />
