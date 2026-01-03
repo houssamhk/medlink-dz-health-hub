@@ -149,6 +149,9 @@ const Auth = () => {
       }
 
       if (data.user) {
+        // Wait a bit for the trigger to create the default role
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Set appropriate role based on account type
         let role: 'patient' | 'doctor' | 'pharmacist' = 'patient';
         if (accountType === 'doctor' || accountType === 'clinic') {
@@ -158,10 +161,18 @@ const Auth = () => {
         }
 
         if (role !== 'patient') {
-          await supabase
+          // Try update first, then upsert if needed
+          const { error: updateError } = await supabase
             .from('user_roles')
             .update({ role })
             .eq('user_id', data.user.id);
+          
+          // If update failed (no rows), insert the role
+          if (updateError) {
+            await supabase
+              .from('user_roles')
+              .upsert({ user_id: data.user.id, role }, { onConflict: 'user_id' });
+          }
         }
 
         // Create appropriate profile based on account type

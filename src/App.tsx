@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import PermissionPrompt from "@/components/PermissionPrompt";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -45,27 +46,77 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            
+            {/* Patient Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['patient']}>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Doctor Routes */}
+            <Route path="/doctor-dashboard" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DoctorDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/doctor-profile" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DoctorProfile />
+              </ProtectedRoute>
+            } />
+            
+            {/* Pharmacist Routes */}
+            <Route path="/pharmacy-dashboard" element={
+              <ProtectedRoute allowedRoles={['pharmacist']}>
+                <PharmacyDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/pharmacy-profile" element={
+              <ProtectedRoute allowedRoles={['pharmacist']}>
+                <PharmacyProfile />
+              </ProtectedRoute>
+            } />
+            
+            {/* Clinic Routes */}
+            <Route path="/clinic-dashboard" element={
+              <ProtectedRoute allowedRoles={['clinic']}>
+                <ClinicDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/clinic-profile" element={
+              <ProtectedRoute allowedRoles={['clinic']}>
+                <ClinicProfile />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Lab Admin Routes */}
+            <Route path="/lab-dashboard" element={
+              <ProtectedRoute allowedRoles={['lab_admin']}>
+                <LabDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Shared Authenticated Routes */}
             <Route path="/doctors" element={<Doctors />} />
             <Route path="/lab-results" element={<LabResults />} />
             <Route path="/ai-triage" element={<AITriage />} />
             <Route path="/pharmacies" element={<Pharmacies />} />
-            <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
             <Route path="/book-appointment" element={<BookAppointment />} />
             <Route path="/medical-record" element={<MedicalRecord />} />
             <Route path="/send-to-doctor" element={<SendToDoctor />} />
-            <Route path="/doctor-profile" element={<DoctorProfile />} />
-            <Route path="/lab-dashboard" element={<LabDashboard />} />
             <Route path="/patient-profile" element={<PatientProfile />} />
             <Route path="/prescriptions" element={<Prescriptions />} />
             <Route path="/payment" element={<PaymentPage />} />
-            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/family" element={<FamilyMembers />} />
             <Route path="/telemedicine" element={<Telemedicine />} />
-            <Route path="/pharmacy-profile" element={<PharmacyProfile />} />
-            <Route path="/clinic-profile" element={<ClinicProfile />} />
-            <Route path="/pharmacy-dashboard" element={<PharmacyDashboard />} />
-            <Route path="/clinic-dashboard" element={<ClinicDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />

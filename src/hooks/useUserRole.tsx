@@ -19,24 +19,34 @@ export const useUserRole = () => {
     }
 
     const fetchRole = async () => {
-      // Check for roles in priority order
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+      try {
+        // Check for roles in priority order
+        const { data: roles, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
 
-      if (roles && roles.length > 0) {
-        // Priority: admin > doctor > pharmacist > lab_admin > patient
-        const roleOrder: UserRole[] = ['admin', 'doctor', 'pharmacist', 'lab_admin', 'patient'];
-        const userRoles = roles.map(r => r.role as UserRole);
-        
-        for (const r of roleOrder) {
-          if (userRoles.includes(r)) {
-            setRole(r);
-            break;
+        if (error) {
+          console.error('Error fetching roles:', error);
+          setRole('patient');
+          setLoading(false);
+          return;
+        }
+
+        if (roles && roles.length > 0) {
+          // Priority: admin > doctor > pharmacist > lab_admin > clinic > patient
+          const roleOrder: UserRole[] = ['admin', 'doctor', 'pharmacist', 'lab_admin', 'clinic', 'patient'];
+          const userRoles = roles.map(r => r.role as UserRole);
+          
+          for (const r of roleOrder) {
+            if (userRoles.includes(r)) {
+              setRole(r);
+              setLoading(false);
+              return;
+            }
           }
         }
-      } else {
+        
         // Check if user has a clinic (clinic owner)
         const { data: clinic } = await supabase
           .from('clinics')
@@ -49,9 +59,12 @@ export const useUserRole = () => {
         } else {
           setRole('patient');
         }
+      } catch (err) {
+        console.error('Error in fetchRole:', err);
+        setRole('patient');
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchRole();
