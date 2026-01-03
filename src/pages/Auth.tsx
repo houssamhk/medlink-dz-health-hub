@@ -42,11 +42,23 @@ const Auth = () => {
     
     const isDoctor = roles?.some(r => r.role === 'doctor');
     const isPharmacist = roles?.some(r => r.role === 'pharmacist');
+    const isAdmin = roles?.some(r => r.role === 'admin');
+
+    // Check if clinic owner
+    const { data: clinicData } = await supabase
+      .from('clinics')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     
-    if (isDoctor) {
+    if (isAdmin) {
+      navigate('/admin');
+    } else if (isDoctor) {
       navigate('/doctor-dashboard');
     } else if (isPharmacist) {
-      navigate('/pharmacy-profile');
+      navigate('/pharmacy-dashboard');
+    } else if (clinicData) {
+      navigate('/clinic-dashboard');
     } else {
       navigate('/dashboard');
     }

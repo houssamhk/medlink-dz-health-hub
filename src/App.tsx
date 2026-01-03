@@ -27,6 +27,8 @@ import FamilyMembers from "./pages/FamilyMembers";
 import Telemedicine from "./pages/Telemedicine";
 import PharmacyProfile from "./pages/PharmacyProfile";
 import ClinicProfile from "./pages/ClinicProfile";
+import PharmacyDashboard from "./pages/PharmacyDashboard";
+import ClinicDashboard from "./pages/ClinicDashboard";
 import SmartAssistant from "./components/SmartAssistant";
 import NotFound from "./pages/NotFound";
 
@@ -62,6 +64,8 @@ const App = () => (
             <Route path="/telemedicine" element={<Telemedicine />} />
             <Route path="/pharmacy-profile" element={<PharmacyProfile />} />
             <Route path="/clinic-profile" element={<ClinicProfile />} />
+            <Route path="/pharmacy-dashboard" element={<PharmacyDashboard />} />
+            <Route path="/clinic-dashboard" element={<ClinicDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />
