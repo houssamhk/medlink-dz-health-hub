@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle, Users, Video, Shield } from "lucide-react";
+import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle, Users, Video, Shield, Building, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -20,6 +20,7 @@ const Navbar = () => {
   const [isDoctor, setIsDoctor] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isPharmacist, setIsPharmacist] = useState(false);
+  const [isClinicOwner, setIsClinicOwner] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -36,6 +37,15 @@ const Navbar = () => {
     setIsDoctor(data?.some(r => r.role === 'doctor') ?? false);
     setIsAdmin(data?.some(r => r.role === 'admin') ?? false);
     setIsPharmacist(data?.some(r => r.role === 'pharmacist') ?? false);
+
+    // Check if clinic owner
+    const { data: clinicData } = await supabase
+      .from('clinics')
+      .select('id')
+      .eq('user_id', user?.id)
+      .maybeSingle();
+    
+    setIsClinicOwner(!!clinicData);
   };
 
   const handleSignOut = async () => {
@@ -127,6 +137,30 @@ const Navbar = () => {
                         </DropdownMenuItem>
                       </>
                     )}
+                    {isPharmacist && (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate('/pharmacy-dashboard')}>
+                          <Building className="w-4 h-4 mr-2" />
+                          لوحة الصيدلية
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/pharmacy-profile')}>
+                          <Settings className="w-4 h-4 mr-2" />
+                          إعدادات الصيدلية
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {isClinicOwner && (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate('/clinic-dashboard')}>
+                          <Building2 className="w-4 h-4 mr-2" />
+                          لوحة العيادة
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/clinic-profile')}>
+                          <Settings className="w-4 h-4 mr-2" />
+                          إعدادات العيادة
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     {isAdmin && (
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
                         <Shield className="w-4 h-4 mr-2" />
@@ -191,6 +225,16 @@ const Navbar = () => {
                           إعدادات الملف
                         </Button>
                       </>
+                    )}
+                    {isPharmacist && (
+                      <Button variant="outline" className="w-full" onClick={() => { navigate('/pharmacy-dashboard'); setIsOpen(false); }}>
+                        لوحة الصيدلية
+                      </Button>
+                    )}
+                    {isClinicOwner && (
+                      <Button variant="outline" className="w-full" onClick={() => { navigate('/clinic-dashboard'); setIsOpen(false); }}>
+                        لوحة العيادة
+                      </Button>
                     )}
                     <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>
                       تسجيل الخروج
