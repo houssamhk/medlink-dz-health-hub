@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -31,15 +32,24 @@ interface Appointment {
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
+  const { role, loading: roleLoading, getDashboardRoute } = useUserRole();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading || roleLoading) return;
+    
+    if (!user) {
       navigate('/auth');
+      return;
     }
-  }, [user, authLoading, navigate]);
+
+    // Redirect non-patients to their appropriate dashboard
+    if (role && role !== 'patient') {
+      navigate(getDashboardRoute());
+    }
+  }, [user, role, authLoading, roleLoading, navigate, getDashboardRoute]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -75,7 +85,7 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  if (authLoading || !user) {
+  if (authLoading || roleLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
