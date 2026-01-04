@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle, Users, Video, Shield, Building, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
@@ -16,50 +17,91 @@ import NotificationBell from "./NotificationBell";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut, loading } = useAuth();
+  const { role, loading: roleLoading, getDashboardRoute, getRoleName } = useUserRole();
   const navigate = useNavigate();
-  const [isDoctor, setIsDoctor] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isPharmacist, setIsPharmacist] = useState(false);
-  const [isClinicOwner, setIsClinicOwner] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      checkRoles();
-    }
-  }, [user]);
-
-  const checkRoles = async () => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id);
-    
-    setIsDoctor(data?.some(r => r.role === 'doctor') ?? false);
-    setIsAdmin(data?.some(r => r.role === 'admin') ?? false);
-    setIsPharmacist(data?.some(r => r.role === 'pharmacist') ?? false);
-
-    // Check if clinic owner
-    const { data: clinicData } = await supabase
-      .from('clinics')
-      .select('id')
-      .eq('user_id', user?.id)
-      .maybeSingle();
-    
-    setIsClinicOwner(!!clinicData);
-  };
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
-  const navLinks = [
-    { name: "الرئيسية", href: "/" },
-    { name: "الأطباء", href: "/doctors" },
-    { name: "تحليل النتائج", href: "/lab-results" },
-    { name: "المساعد الذكي", href: "/ai-triage" },
-    { name: "الصيدليات", href: "/pharmacies" },
-  ];
+  // Navigation links based on role
+  const getNavLinks = () => {
+    const commonLinks = [
+      { name: "الرئيسية", href: "/" },
+    ];
+
+    // Patient-specific links
+    if (role === 'patient' || !role) {
+      return [
+        ...commonLinks,
+        { name: "الأطباء", href: "/doctors" },
+        { name: "تحليل النتائج", href: "/lab-results" },
+        { name: "المساعد الذكي", href: "/ai-triage" },
+        { name: "الصيدليات", href: "/pharmacies" },
+      ];
+    }
+
+    // Pharmacist - don't show doctors or lab results
+    if (role === 'pharmacist') {
+      return [
+        ...commonLinks,
+        { name: "الصيدليات", href: "/pharmacies" },
+      ];
+    }
+
+    // Clinic owner
+    if (role === 'clinic') {
+      return [
+        ...commonLinks,
+        { name: "الصيدليات", href: "/pharmacies" },
+      ];
+    }
+
+    // Doctor
+    if (role === 'doctor') {
+      return [
+        ...commonLinks,
+        { name: "الأطباء", href: "/doctors" },
+        { name: "الصيدليات", href: "/pharmacies" },
+      ];
+    }
+
+    // Admin - full access
+    if (role === 'admin') {
+      return [
+        ...commonLinks,
+        { name: "الأطباء", href: "/doctors" },
+        { name: "تحليل النتائج", href: "/lab-results" },
+        { name: "المساعد الذكي", href: "/ai-triage" },
+        { name: "الصيدليات", href: "/pharmacies" },
+      ];
+    }
+
+    return commonLinks;
+  };
+
+  const navLinks = getNavLinks();
+
+  // Get profile route based on role
+  const getProfileRoute = () => {
+    switch (role) {
+      case 'doctor': return '/doctor-profile';
+      case 'pharmacist': return '/profile';
+      case 'clinic': return '/profile';
+      default: return '/profile';
+    }
+  };
+
+  // Get profile label based on role
+  const getProfileLabel = () => {
+    switch (role) {
+      case 'doctor': return 'ملف الطبيب';
+      case 'pharmacist': return 'ملف الصيدلية';
+      case 'clinic': return 'ملف العيادة';
+      default: return 'ملفي الشخصي';
+    }
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border/50">
@@ -90,7 +132,7 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {loading ? (
+            {loading || roleLoading ? (
               <div className="w-24 h-10 bg-muted animate-pulse rounded-lg" />
             ) : user ? (
               <>
@@ -105,68 +147,49 @@ const Navbar = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    <DropdownMenuItem onClick={() => navigate(getDashboardRoute())}>
                       <User className="w-4 h-4 mr-2" />
                       لوحة التحكم
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/patient-profile')}>
+                    <DropdownMenuItem onClick={() => navigate(getProfileRoute())}>
                       <UserCircle className="w-4 h-4 mr-2" />
-                      ملفي الشخصي
+                      {getProfileLabel()}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/prescriptions')}>
-                      <Pill className="w-4 h-4 mr-2" />
-                      الوصفات الطبية
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/family')}>
-                      <Users className="w-4 h-4 mr-2" />
-                      أفراد العائلة
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/telemedicine')}>
-                      <Video className="w-4 h-4 mr-2" />
-                      الطب عن بعد
-                    </DropdownMenuItem>
-                    {isDoctor && (
+                    
+                    {/* Patient-only menu items */}
+                    {role === 'patient' && (
                       <>
-                        <DropdownMenuItem onClick={() => navigate('/doctor-dashboard')}>
-                          <Stethoscope className="w-4 h-4 mr-2" />
-                          لوحة الطبيب
+                        <DropdownMenuItem onClick={() => navigate('/prescriptions')}>
+                          <Pill className="w-4 h-4 mr-2" />
+                          الوصفات الطبية
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/doctor-profile')}>
-                          <Settings className="w-4 h-4 mr-2" />
-                          إعدادات الملف
+                        <DropdownMenuItem onClick={() => navigate('/family')}>
+                          <Users className="w-4 h-4 mr-2" />
+                          أفراد العائلة
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/telemedicine')}>
+                          <Video className="w-4 h-4 mr-2" />
+                          الطب عن بعد
                         </DropdownMenuItem>
                       </>
                     )}
-                    {isPharmacist && (
-                      <>
-                        <DropdownMenuItem onClick={() => navigate('/pharmacy-dashboard')}>
-                          <Building className="w-4 h-4 mr-2" />
-                          لوحة الصيدلية
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/pharmacy-profile')}>
-                          <Settings className="w-4 h-4 mr-2" />
-                          إعدادات الصيدلية
-                        </DropdownMenuItem>
-                      </>
+
+                    {/* Doctor-specific */}
+                    {role === 'doctor' && (
+                      <DropdownMenuItem onClick={() => navigate('/doctor-profile')}>
+                        <Settings className="w-4 h-4 mr-2" />
+                        إعدادات الملف
+                      </DropdownMenuItem>
                     )}
-                    {isClinicOwner && (
-                      <>
-                        <DropdownMenuItem onClick={() => navigate('/clinic-dashboard')}>
-                          <Building2 className="w-4 h-4 mr-2" />
-                          لوحة العيادة
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/clinic-profile')}>
-                          <Settings className="w-4 h-4 mr-2" />
-                          إعدادات العيادة
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {isAdmin && (
+
+                    {/* Admin link */}
+                    {role === 'admin' && (
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
                         <Shield className="w-4 h-4 mr-2" />
                         لوحة الإدارة
                       </DropdownMenuItem>
                     )}
+                    
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                       <LogOut className="w-4 h-4 mr-2" />
@@ -213,27 +236,15 @@ const Navbar = () => {
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
                 {user ? (
                   <>
-                    <Button variant="outline" className="w-full" onClick={() => { navigate('/dashboard'); setIsOpen(false); }}>
+                    <Button variant="outline" className="w-full" onClick={() => { navigate(getDashboardRoute()); setIsOpen(false); }}>
                       لوحة التحكم
                     </Button>
-                    {isDoctor && (
-                      <>
-                        <Button variant="outline" className="w-full" onClick={() => { navigate('/doctor-dashboard'); setIsOpen(false); }}>
-                          لوحة الطبيب
-                        </Button>
-                        <Button variant="outline" className="w-full" onClick={() => { navigate('/doctor-profile'); setIsOpen(false); }}>
-                          إعدادات الملف
-                        </Button>
-                      </>
-                    )}
-                    {isPharmacist && (
-                      <Button variant="outline" className="w-full" onClick={() => { navigate('/pharmacy-dashboard'); setIsOpen(false); }}>
-                        لوحة الصيدلية
-                      </Button>
-                    )}
-                    {isClinicOwner && (
-                      <Button variant="outline" className="w-full" onClick={() => { navigate('/clinic-dashboard'); setIsOpen(false); }}>
-                        لوحة العيادة
+                    <Button variant="outline" className="w-full" onClick={() => { navigate(getProfileRoute()); setIsOpen(false); }}>
+                      {getProfileLabel()}
+                    </Button>
+                    {role === 'patient' && (
+                      <Button variant="outline" className="w-full" onClick={() => { navigate('/prescriptions'); setIsOpen(false); }}>
+                        الوصفات الطبية
                       </Button>
                     )}
                     <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>

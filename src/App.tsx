@@ -20,14 +20,12 @@ import MedicalRecord from "./pages/MedicalRecord";
 import SendToDoctor from "./pages/SendToDoctor";
 import DoctorProfile from "./pages/DoctorProfile";
 import LabDashboard from "./pages/LabDashboard";
-import PatientProfile from "./pages/PatientProfile";
+import Profile from "./pages/Profile";
 import Prescriptions from "./pages/Prescriptions";
 import PaymentPage from "./pages/PaymentPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import FamilyMembers from "./pages/FamilyMembers";
 import Telemedicine from "./pages/Telemedicine";
-import PharmacyProfile from "./pages/PharmacyProfile";
-import ClinicProfile from "./pages/ClinicProfile";
 import PharmacyDashboard from "./pages/PharmacyDashboard";
 import ClinicDashboard from "./pages/ClinicDashboard";
 import SmartAssistant from "./components/SmartAssistant";
@@ -72,21 +70,11 @@ const App = () => (
                 <PharmacyDashboard />
               </ProtectedRoute>
             } />
-            <Route path="/pharmacy-profile" element={
-              <ProtectedRoute allowedRoles={['pharmacist']}>
-                <PharmacyProfile />
-              </ProtectedRoute>
-            } />
             
             {/* Clinic Routes */}
             <Route path="/clinic-dashboard" element={
               <ProtectedRoute allowedRoles={['clinic']}>
                 <ClinicDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/clinic-profile" element={
-              <ProtectedRoute allowedRoles={['clinic']}>
-                <ClinicProfile />
               </ProtectedRoute>
             } />
             
@@ -112,7 +100,8 @@ const App = () => (
             <Route path="/book-appointment" element={<BookAppointment />} />
             <Route path="/medical-record" element={<MedicalRecord />} />
             <Route path="/send-to-doctor" element={<SendToDoctor />} />
-            <Route path="/patient-profile" element={<PatientProfile />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/patient-profile" element={<Profile />} />
             <Route path="/prescriptions" element={<Prescriptions />} />
             <Route path="/payment" element={<PaymentPage />} />
             <Route path="/family" element={<FamilyMembers />} />
