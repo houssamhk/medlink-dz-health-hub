@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, AlertTriangle, CheckCircle, Clock, User, Calendar, 
-  Loader2, Send, Inbox, History, UserCircle, Eye
+  Loader2, Send, Inbox, History, UserCircle, Video, MessageSquare,
+  Bell, Stethoscope, FlaskConical, Play, Users
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Navigate, Link } from 'react-router-dom';
@@ -34,16 +35,24 @@ interface MedicalRecord {
   };
 }
 
+interface Appointment {
+  id: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  is_telemedicine: boolean;
+  reason: string | null;
+  patient_id: string;
+  profiles?: {
+    full_name: string;
+    phone: string;
+  };
+}
+
 interface DoctorInfo {
   id: string;
   specialty_id: string;
-}
-
-interface PatientHistory {
-  id: string;
-  full_name: string;
-  records_count: number;
-  last_visit: string;
+  telemedicine_enabled: boolean;
 }
 
 const DoctorDashboard = () => {
@@ -53,7 +62,7 @@ const DoctorDashboard = () => {
   const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
   const [pendingRecords, setPendingRecords] = useState<MedicalRecord[]>([]);
   const [reviewedRecords, setReviewedRecords] = useState<MedicalRecord[]>([]);
-  const [patients, setPatients] = useState<PatientHistory[]>([]);
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [evaluation, setEvaluation] = useState({
     urgency_level: '',
@@ -63,7 +72,8 @@ const DoctorDashboard = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(true);
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -74,13 +84,40 @@ const DoctorDashboard = () => {
   useEffect(() => {
     if (doctorInfo) {
       fetchAllData();
+      setupRealtimeSubscription();
     }
   }, [doctorInfo]);
+
+  const setupRealtimeSubscription = () => {
+    const channel = supabase
+      .channel('doctor-records')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'medical_records',
+          filter: `assigned_doctor_id=eq.${doctorInfo?.id}`
+        },
+        (payload) => {
+          toast({
+            title: "ملف جديد",
+            description: "تم استلام ملف جديد للمراجعة",
+          });
+          fetchAllData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const fetchDoctorInfo = async () => {
     const { data, error } = await supabase
       .from('doctors')
-      .select('id, specialty_id')
+      .select('id, specialty_id, telemedicine_enabled')
       .eq('user_id', user?.id)
       .single();
 
@@ -93,9 +130,10 @@ const DoctorDashboard = () => {
 
   const fetchAllData = async () => {
     setLoadingRecords(true);
+    const today = new Date().toISOString().split('T')[0];
     
-    // جلب الملفات المعلقة والمراجعة
-    const [pendingRes, reviewedRes] = await Promise.all([
+    const [pendingRes, reviewedRes, appointmentsRes, notificationsRes] = await Promise.all([
+      // Pending medical records
       supabase
         .from('medical_records')
         .select('*')
@@ -104,6 +142,7 @@ const DoctorDashboard = () => {
         .in('review_status', ['pending', 'in_review'])
         .order('created_at', { ascending: false }),
       
+      // Reviewed records
       supabase
         .from('medical_records')
         .select('*')
@@ -111,12 +150,31 @@ const DoctorDashboard = () => {
         .eq('assigned_doctor_id', doctorInfo?.id)
         .eq('review_status', 'reviewed')
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(20),
+
+      // Today's appointments
+      supabase
+        .from('appointments')
+        .select('*')
+        .eq('doctor_id', doctorInfo?.id)
+        .eq('appointment_date', today)
+        .in('status', ['pending', 'confirmed'])
+        .order('appointment_time', { ascending: true }),
+
+      // Unread notifications
+      supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', user?.id)
+        .eq('is_read', false)
     ]);
 
-    // جلب بيانات المرضى
+    // Fetch patient profiles
     const allRecords = [...(pendingRes.data || []), ...(reviewedRes.data || [])];
-    const patientIds = [...new Set(allRecords.map(r => r.patient_id))];
+    const patientIds = [...new Set([
+      ...allRecords.map(r => r.patient_id),
+      ...(appointmentsRes.data || []).map(a => a.patient_id)
+    ])];
     
     if (patientIds.length > 0) {
       const { data: profilesData } = await supabase
@@ -124,73 +182,52 @@ const DoctorDashboard = () => {
         .select('id, full_name, date_of_birth, gender, phone')
         .in('id', patientIds);
 
-      // إثراء السجلات ببيانات المرضى
       const enrichRecords = (records: any[]) => records.map(record => ({
         ...record,
         profiles: profilesData?.find(p => p.id === record.patient_id)
       }));
 
+      const enrichAppointments = (appointments: any[]) => appointments.map(apt => ({
+        ...apt,
+        profiles: profilesData?.find(p => p.id === apt.patient_id)
+      }));
+
       setPendingRecords(enrichRecords(pendingRes.data || []));
       setReviewedRecords(enrichRecords(reviewedRes.data || []));
-
-      // إحصائيات المرضى
-      const patientStats = patientIds.map(patientId => {
-        const patientRecords = allRecords.filter(r => r.patient_id === patientId);
-        const profile = profilesData?.find(p => p.id === patientId);
-        return {
-          id: patientId,
-          full_name: profile?.full_name || 'مريض',
-          records_count: patientRecords.length,
-          last_visit: patientRecords[0]?.created_at || ''
-        };
-      });
-      setPatients(patientStats);
+      setTodayAppointments(enrichAppointments(appointmentsRes.data || []));
     } else {
       setPendingRecords([]);
       setReviewedRecords([]);
-      setPatients([]);
+      setTodayAppointments([]);
     }
 
+    setUnreadMessages(notificationsRes.data?.length || 0);
     setLoadingRecords(false);
   };
 
   const claimRecord = async (recordId: string) => {
     const { error } = await supabase
       .from('medical_records')
-      .update({ 
-        review_status: 'in_review'
-      })
+      .update({ review_status: 'in_review' })
       .eq('id', recordId);
 
     if (error) {
-      toast({
-        title: "خطأ",
-        description: "لم نتمكن من تعيين الملف",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: "لم نتمكن من تعيين الملف", variant: "destructive" });
     } else {
       fetchAllData();
-      toast({
-        title: "تم",
-        description: "تم تعيين الملف للمراجعة",
-      });
+      toast({ title: "تم", description: "تم تعيين الملف للمراجعة" });
     }
   };
 
   const submitEvaluation = async () => {
     if (!selectedRecord || !evaluation.urgency_level || !evaluation.diagnosis) {
-      toast({
-        title: "خطأ",
-        description: "يرجى ملء جميع الحقول المطلوبة",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // إنشاء التقييم
       const { error: evalError } = await supabase
         .from('doctor_evaluations')
         .insert({
@@ -204,49 +241,53 @@ const DoctorDashboard = () => {
 
       if (evalError) throw evalError;
 
-      // تحديث حالة السجل
       const { error: updateError } = await supabase
         .from('medical_records')
-        .update({ 
-          review_status: 'reviewed',
-          urgency_level: evaluation.urgency_level
-        })
+        .update({ review_status: 'reviewed', urgency_level: evaluation.urgency_level })
         .eq('id', selectedRecord.id);
 
       if (updateError) throw updateError;
 
-      toast({
-        title: "تم بنجاح",
-        description: "تم حفظ التقييم وسيتم إشعار المريض",
-      });
-
+      toast({ title: "تم بنجاح", description: "تم حفظ التقييم وسيتم إشعار المريض" });
       setSelectedRecord(null);
       setEvaluation({ urgency_level: '', diagnosis: '', recommendations: '', notes: '' });
       fetchAllData();
-
     } catch (error: any) {
       console.error('Error submitting evaluation:', error);
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء حفظ التقييم",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: error.message || "حدث خطأ", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const startConsultation = (appointment: Appointment) => {
+    const now = new Date();
+    const appointmentTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+    const diff = (appointmentTime.getTime() - now.getTime()) / (1000 * 60);
+    
+    if (diff > 15) {
+      toast({ title: "انتظر", description: "لا يمكن بدء الاستشارة قبل 15 دقيقة من الموعد", variant: "destructive" });
+      return;
+    }
+    
+    toast({ title: "جاري التحضير", description: "جاري تحضير غرفة الاستشارة..." });
+    // Here you would navigate to telemedicine room
+  };
+
   const getUrgencyBadge = (level: string) => {
     switch (level) {
-      case 'critical':
-        return <Badge variant="destructive">حرج</Badge>;
-      case 'urgent':
-        return <Badge className="bg-orange-500">عاجل</Badge>;
-      case 'moderate':
-        return <Badge className="bg-yellow-500">متوسط</Badge>;
-      default:
-        return <Badge className="bg-green-500">عادي</Badge>;
+      case 'critical': return <Badge variant="destructive">حرج</Badge>;
+      case 'urgent': return <Badge className="bg-orange-500">عاجل</Badge>;
+      case 'moderate': return <Badge className="bg-yellow-500">متوسط</Badge>;
+      default: return <Badge className="bg-green-500">عادي</Badge>;
     }
+  };
+
+  const isAppointmentStartable = (appointment: Appointment) => {
+    const now = new Date();
+    const appointmentTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+    const diff = (appointmentTime.getTime() - now.getTime()) / (1000 * 60);
+    return diff <= 15 && diff >= -60;
   };
 
   if (loading) {
@@ -257,9 +298,7 @@ const DoctorDashboard = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
 
   if (!doctorInfo) {
     return (
@@ -271,9 +310,7 @@ const DoctorDashboard = () => {
               <AlertTriangle className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
               <h2 className="text-xl font-bold mb-2">غير مصرح</h2>
               <p className="text-muted-foreground mb-4">هذه الصفحة للأطباء فقط</p>
-              <Link to="/dashboard">
-                <Button>العودة للوحة التحكم</Button>
-              </Link>
+              <Link to="/dashboard"><Button>العودة للوحة التحكم</Button></Link>
             </CardContent>
           </Card>
         </main>
@@ -287,43 +324,62 @@ const DoctorDashboard = () => {
       
       <main className="container mx-auto px-4 py-8" dir="rtl">
         <div className="pt-20">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">لوحة تحكم الطبيب</h1>
-            <p className="text-muted-foreground">مراجعة ملفات المرضى والرد عليها</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">مركز التحكم الطبي</h1>
+              <p className="text-muted-foreground">إدارة المواعيد والملفات الطبية</p>
+            </div>
+            <Link to="/doctor-profile">
+              <Button variant="outline">تعديل الملف الشخصي</Button>
+            </Link>
           </div>
 
-          {/* إحصائيات سريعة */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5">
               <CardContent className="py-4 flex items-center gap-4">
-                <div className="p-3 bg-yellow-100 rounded-full">
-                  <Inbox className="h-6 w-6 text-yellow-600" />
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <Users className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{pendingRecords.length}</p>
-                  <p className="text-muted-foreground text-sm">ملفات في الانتظار</p>
+                  <p className="text-2xl font-bold">{todayAppointments.length}</p>
+                  <p className="text-muted-foreground text-sm">مرضى اليوم</p>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5">
+              <CardContent className="py-4 flex items-center gap-4">
+                <div className="p-3 bg-yellow-100 rounded-full">
+                  <FlaskConical className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{pendingRecords.length}</p>
+                  <p className="text-muted-foreground text-sm">تحاليل معلقة</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5">
+              <CardContent className="py-4 flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <Bell className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{unreadMessages}</p>
+                  <p className="text-muted-foreground text-sm">رسائل غير مقروءة</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5">
               <CardContent className="py-4 flex items-center gap-4">
                 <div className="p-3 bg-green-100 rounded-full">
                   <CheckCircle className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{reviewedRecords.length}</p>
-                  <p className="text-muted-foreground text-sm">ملفات تمت مراجعتها</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-4 flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <UserCircle className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{patients.length}</p>
-                  <p className="text-muted-foreground text-sm">مرضى</p>
+                  <p className="text-muted-foreground text-sm">ملفات مراجعة</p>
                 </div>
               </CardContent>
             </Card>
@@ -331,29 +387,183 @@ const DoctorDashboard = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
-              <TabsTrigger value="pending" className="flex items-center gap-2">
-                <Inbox className="h-4 w-4" />
-                الملفات المعلقة ({pendingRecords.length})
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Stethoscope className="h-4 w-4" />
+                نظرة عامة
+              </TabsTrigger>
+              <TabsTrigger value="schedule" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                جدول اليوم
+              </TabsTrigger>
+              <TabsTrigger value="lab-review" className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4" />
+                مراجعة التحاليل ({pendingRecords.length})
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-2">
                 <History className="h-4 w-4" />
-                السجل ({reviewedRecords.length})
-              </TabsTrigger>
-              <TabsTrigger value="patients" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                المرضى ({patients.length})
+                السجل
               </TabsTrigger>
             </TabsList>
 
-            {/* الملفات المعلقة */}
-            <TabsContent value="pending">
+            {/* Overview Tab */}
+            <TabsContent value="overview">
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Today's Schedule */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      جدول اليوم
+                    </CardTitle>
+                    <CardDescription>المواعيد المجدولة لليوم</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {todayAppointments.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>لا توجد مواعيد اليوم</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {todayAppointments.slice(0, 5).map((apt) => (
+                          <div key={apt.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-full ${apt.is_telemedicine ? 'bg-purple-100' : 'bg-blue-100'}`}>
+                                {apt.is_telemedicine ? <Video className="h-4 w-4 text-purple-600" /> : <User className="h-4 w-4 text-blue-600" />}
+                              </div>
+                              <div>
+                                <p className="font-medium">{apt.profiles?.full_name || 'مريض'}</p>
+                                <p className="text-sm text-muted-foreground">{apt.appointment_time}</p>
+                              </div>
+                            </div>
+                            {apt.is_telemedicine && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => startConsultation(apt)}
+                                disabled={!isAppointmentStartable(apt)}
+                                className={isAppointmentStartable(apt) ? 'bg-green-600 hover:bg-green-700' : ''}
+                              >
+                                <Play className="h-4 w-4 ml-1" />
+                                بدء
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Pending Lab Results */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FlaskConical className="h-5 w-5" />
+                      تحاليل تنتظر المراجعة
+                    </CardTitle>
+                    <CardDescription>ملفات طبية تحتاج تقييمك</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {pendingRecords.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
+                        <p>لا توجد ملفات معلقة</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pendingRecords.slice(0, 5).map((record) => (
+                          <div key={record.id} className="flex items-center justify-between p-3 border rounded-lg hover:border-primary/50 cursor-pointer" onClick={() => { setActiveTab('lab-review'); setSelectedRecord(record); }}>
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-yellow-100 rounded-full">
+                                <FileText className="h-4 w-4 text-yellow-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{record.title}</p>
+                                <p className="text-sm text-muted-foreground">{record.profiles?.full_name || 'مريض'}</p>
+                              </div>
+                            </div>
+                            <Badge variant={record.review_status === 'in_review' ? 'secondary' : 'outline'}>
+                              {record.review_status === 'in_review' ? 'قيد المراجعة' : 'جديد'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Schedule Tab */}
+            <TabsContent value="schedule">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Video className="h-5 w-5" />
+                    استشارات اليوم
+                  </CardTitle>
+                  <CardDescription>الاستشارات عن بعد والمواعيد الحضورية</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {todayAppointments.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Calendar className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium mb-2">لا توجد مواعيد لليوم</h3>
+                      <p>ستظهر هنا المواعيد المحجوزة من قبل المرضى</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {todayAppointments.map((apt) => (
+                        <div key={apt.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <div className={`p-3 rounded-full ${apt.is_telemedicine ? 'bg-purple-100' : 'bg-blue-100'}`}>
+                              {apt.is_telemedicine ? <Video className="h-6 w-6 text-purple-600" /> : <User className="h-6 w-6 text-blue-600" />}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{apt.profiles?.full_name || 'مريض'}</h3>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  {apt.appointment_time}
+                                </span>
+                                {apt.profiles?.phone && (
+                                  <span dir="ltr">{apt.profiles.phone}</span>
+                                )}
+                              </div>
+                              {apt.reason && <p className="text-sm mt-1">{apt.reason}</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={apt.is_telemedicine ? 'default' : 'secondary'}>
+                              {apt.is_telemedicine ? 'عن بعد' : 'حضوري'}
+                            </Badge>
+                            {apt.is_telemedicine && (
+                              <Button 
+                                onClick={() => startConsultation(apt)}
+                                disabled={!isAppointmentStartable(apt)}
+                                className={isAppointmentStartable(apt) ? 'bg-green-600 hover:bg-green-700' : ''}
+                              >
+                                <Play className="h-4 w-4 ml-2" />
+                                بدء الاستشارة
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Lab Review Tab */}
+            <TabsContent value="lab-review">
               <div className="grid lg:grid-cols-3 gap-6">
-                {/* قائمة الملفات */}
                 <div className="lg:col-span-1">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
+                        <Inbox className="h-5 w-5" />
                         الملفات المعلقة
                       </CardTitle>
                     </CardHeader>
@@ -372,9 +582,7 @@ const DoctorDashboard = () => {
                           <div
                             key={record.id}
                             className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                              selectedRecord?.id === record.id 
-                                ? 'border-primary bg-primary/5' 
-                                : 'hover:border-primary/50'
+                              selectedRecord?.id === record.id ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
                             }`}
                             onClick={() => setSelectedRecord(record)}
                           >
@@ -396,10 +604,7 @@ const DoctorDashboard = () => {
                               <Button 
                                 size="sm" 
                                 className="mt-2 w-full"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  claimRecord(record.id);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); claimRecord(record.id); }}
                               >
                                 <Clock className="h-4 w-4 ml-2" />
                                 بدء المراجعة
@@ -412,7 +617,6 @@ const DoctorDashboard = () => {
                   </Card>
                 </div>
 
-                {/* نموذج التقييم */}
                 <div className="lg:col-span-2">
                   {selectedRecord ? (
                     <Card>
@@ -424,7 +628,6 @@ const DoctorDashboard = () => {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
-                        {/* معلومات المريض */}
                         <div className="bg-muted p-4 rounded-lg">
                           <h4 className="font-medium mb-2">معلومات المريض</h4>
                           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -435,19 +638,13 @@ const DoctorDashboard = () => {
                           </div>
                         </div>
 
-                        {/* صورة التحليل */}
                         {selectedRecord.file_url && (
                           <div className="border rounded-lg p-4">
                             <h3 className="font-medium mb-2">صورة التحليل:</h3>
-                            <img 
-                              src={selectedRecord.file_url} 
-                              alt="Lab Result" 
-                              className="max-h-64 rounded-lg"
-                            />
+                            <img src={selectedRecord.file_url} alt="Lab Result" className="max-h-64 rounded-lg" />
                           </div>
                         )}
 
-                        {/* ملاحظات المريض */}
                         {selectedRecord.description && (
                           <div className="border rounded-lg p-4">
                             <h3 className="font-medium mb-2">ملاحظات المريض:</h3>
@@ -455,17 +652,11 @@ const DoctorDashboard = () => {
                           </div>
                         )}
 
-                        {/* نموذج التقييم */}
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium mb-2">مستوى الإلحاح *</label>
-                            <Select
-                              value={evaluation.urgency_level}
-                              onValueChange={(v) => setEvaluation({...evaluation, urgency_level: v})}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="اختر مستوى الإلحاح" />
-                              </SelectTrigger>
+                            <Select value={evaluation.urgency_level} onValueChange={(v) => setEvaluation({...evaluation, urgency_level: v})}>
+                              <SelectTrigger><SelectValue placeholder="اختر مستوى الإلحاح" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="normal">عادي - لا يستدعي قلق</SelectItem>
                                 <SelectItem value="moderate">متوسط - يحتاج متابعة</SelectItem>
@@ -486,7 +677,7 @@ const DoctorDashboard = () => {
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium mb-2">التوصيات (كل توصية في سطر)</label>
+                            <label className="block text-sm font-medium mb-2">التوصيات</label>
                             <Textarea
                               placeholder="التوصية الأولى&#10;التوصية الثانية&#10;..."
                               value={evaluation.recommendations}
@@ -505,25 +696,11 @@ const DoctorDashboard = () => {
                           </div>
 
                           <div className="flex gap-3">
-                            <Button 
-                              className="flex-1" 
-                              onClick={submitEvaluation}
-                              disabled={submitting}
-                            >
-                              {submitting ? (
-                                <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                              ) : (
-                                <Send className="h-4 w-4 ml-2" />
-                              )}
+                            <Button className="flex-1" onClick={submitEvaluation} disabled={submitting}>
+                              {submitting ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Send className="h-4 w-4 ml-2" />}
                               إرسال التقييم للمريض
                             </Button>
-                            <Button 
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedRecord(null);
-                                setEvaluation({ urgency_level: '', diagnosis: '', recommendations: '', notes: '' });
-                              }}
-                            >
+                            <Button variant="outline" onClick={() => { setSelectedRecord(null); setEvaluation({ urgency_level: '', diagnosis: '', recommendations: '', notes: '' }); }}>
                               إلغاء
                             </Button>
                           </div>
@@ -543,7 +720,7 @@ const DoctorDashboard = () => {
               </div>
             </TabsContent>
 
-            {/* السجل */}
+            {/* History Tab */}
             <TabsContent value="history">
               <div className="space-y-4">
                 {reviewedRecords.length === 0 ? (
@@ -564,50 +741,11 @@ const DoctorDashboard = () => {
                             </div>
                             <div>
                               <h3 className="font-semibold">{record.title}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                المريض: {record.profiles?.full_name || 'مريض'}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(record.created_at).toLocaleDateString('ar-DZ')}
-                              </p>
+                              <p className="text-sm text-muted-foreground">المريض: {record.profiles?.full_name || 'مريض'}</p>
+                              <p className="text-sm text-muted-foreground">{new Date(record.created_at).toLocaleDateString('ar-DZ')}</p>
                             </div>
                           </div>
                           {record.urgency_level && getUrgencyBadge(record.urgency_level)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-
-            {/* المرضى */}
-            <TabsContent value="patients">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {patients.length === 0 ? (
-                  <Card className="col-span-full">
-                    <CardContent className="py-12 text-center">
-                      <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">لا يوجد مرضى بعد</h3>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  patients.map((patient) => (
-                    <Card key={patient.id}>
-                      <CardContent className="py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-primary/10 rounded-full">
-                            <UserCircle className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{patient.full_name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {patient.records_count} ملفات
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              آخر زيارة: {new Date(patient.last_visit).toLocaleDateString('ar-DZ')}
-                            </p>
-                          </div>
                         </div>
                       </CardContent>
                     </Card>

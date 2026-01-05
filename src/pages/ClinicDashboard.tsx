@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building, MapPin, Clock, Phone, Settings, Users, TrendingUp, Calendar, CheckCircle, Shield, CreditCard, Star } from 'lucide-react';
+import { 
+  Loader2, Building, MapPin, Clock, Phone, Settings, Users, 
+  Calendar, CheckCircle, CreditCard, Star, BedDouble, UserCheck
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Navigate, Link } from 'react-router-dom';
 
@@ -33,7 +36,14 @@ const ClinicDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [clinic, setClinic] = useState<ClinicData | null>(null);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
-  const [appointmentsCount, setAppointmentsCount] = useState(0);
+  
+  // Placeholder stats
+  const [stats, setStats] = useState({
+    todayAppointments: 0,
+    totalCapacity: 20,
+    currentOccupancy: 0,
+    waitingPatients: 0
+  });
 
   useEffect(() => {
     if (user) {
@@ -50,9 +60,6 @@ const ClinicDashboard = () => {
       .maybeSingle();
 
     setClinic(clinicData);
-
-    // Could fetch appointments count if we had a relationship
-    
     setLoading(false);
   };
 
@@ -99,7 +106,7 @@ const ClinicDashboard = () => {
               <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-bold mb-2">لم يتم إعداد العيادة</h2>
               <p className="text-muted-foreground mb-4">يرجى إكمال بيانات عيادتك أولاً</p>
-              <Link to="/clinic-profile">
+              <Link to="/profile">
                 <Button>إعداد العيادة</Button>
               </Link>
             </CardContent>
@@ -114,9 +121,17 @@ const ClinicDashboard = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 pt-24" dir="rtl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">لوحة تحكم العيادة</h1>
-          <p className="text-muted-foreground">إدارة عيادتك والمواعيد</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">لوحة تحكم العيادة</h1>
+            <p className="text-muted-foreground">إدارة عيادتك والمواعيد</p>
+          </div>
+          <Link to="/profile">
+            <Button variant="outline">
+              <Settings className="h-4 w-4 ml-2" />
+              تعديل البيانات
+            </Button>
+          </Link>
         </div>
 
         {/* Clinic Info Card */}
@@ -158,18 +173,13 @@ const ClinicDashboard = () => {
                 <Badge variant={clinic.is_available ? "default" : "secondary"} className="text-lg py-2 px-4">
                   {clinic.is_available ? "🟢 متاحة للحجز" : "🔴 غير متاحة"}
                 </Badge>
-                <Link to="/clinic-profile">
-                  <Button variant="outline" size="icon">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </Link>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
             <CardContent className="py-6">
               <div className="flex items-center justify-between">
@@ -193,7 +203,7 @@ const ClinicDashboard = () => {
                   <Calendar className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{appointmentsCount}</p>
+                  <p className="text-2xl font-bold">{stats.todayAppointments}</p>
                   <p className="text-sm text-muted-foreground">مواعيد اليوم</p>
                 </div>
               </div>
@@ -204,11 +214,11 @@ const ClinicDashboard = () => {
             <CardContent className="py-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-100 rounded-full">
-                  <CreditCard className="h-6 w-6 text-purple-600" />
+                  <BedDouble className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{clinic.consultation_price || 0} دج</p>
-                  <p className="text-sm text-muted-foreground">سعر الاستشارة</p>
+                  <p className="text-2xl font-bold">{stats.currentOccupancy}/{stats.totalCapacity}</p>
+                  <p className="text-sm text-muted-foreground">السعة الحالية</p>
                 </div>
               </div>
             </CardContent>
@@ -217,12 +227,12 @@ const ClinicDashboard = () => {
           <Card>
             <CardContent className="py-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-yellow-100 rounded-full">
-                  <Star className="h-6 w-6 text-yellow-600" />
+                <div className="p-3 bg-orange-100 rounded-full">
+                  <UserCheck className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">-</p>
-                  <p className="text-sm text-muted-foreground">التقييم</p>
+                  <p className="text-2xl font-bold">{stats.waitingPatients}</p>
+                  <p className="text-sm text-muted-foreground">بانتظار الدور</p>
                 </div>
               </div>
             </CardContent>
@@ -231,6 +241,53 @@ const ClinicDashboard = () => {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Today's Appointments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                المواعيد الحضورية
+              </CardTitle>
+              <CardDescription>المواعيد المحجوزة لليوم</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>لا توجد مواعيد لليوم</p>
+                <p className="text-sm mt-2">ستظهر هنا المواعيد المحجوزة</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Capacity & Rooms */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BedDouble className="h-5 w-5" />
+                السعة والغرف
+              </CardTitle>
+              <CardDescription>متابعة إشغال العيادة</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="font-medium">السعة الكلية</p>
+                    <p className="text-sm text-muted-foreground">عدد المقاعد/الأسرة</p>
+                  </div>
+                  <p className="text-2xl font-bold">{stats.totalCapacity}</p>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div>
+                    <p className="font-medium text-green-700">متاح حالياً</p>
+                    <p className="text-sm text-green-600">أماكن شاغرة</p>
+                  </div>
+                  <p className="text-2xl font-bold text-green-700">{stats.totalCapacity - stats.currentOccupancy}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Working Hours */}
           <Card>
             <CardHeader>
@@ -263,7 +320,7 @@ const ClinicDashboard = () => {
                 <div className="text-center py-4 text-muted-foreground">
                   <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>لم يتم تحديد ساعات العمل</p>
-                  <Link to="/clinic-profile">
+                  <Link to="/profile">
                     <Button variant="link" size="sm">تحديد الآن</Button>
                   </Link>
                 </div>
@@ -299,7 +356,7 @@ const ClinicDashboard = () => {
                   <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>لم يتم تحديد الموقع</p>
                   <p className="text-sm mb-2">لن تظهر عيادتك على الخريطة</p>
-                  <Link to="/clinic-profile">
+                  <Link to="/profile">
                     <Button variant="outline" size="sm">تحديد الموقع</Button>
                   </Link>
                 </div>
@@ -307,7 +364,7 @@ const ClinicDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Clinic Bio */}
+          {/* Clinic Info */}
           {clinic.bio && (
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -319,20 +376,20 @@ const ClinicDashboard = () => {
             </Card>
           )}
 
-          {/* Upcoming Appointments */}
+          {/* Pricing Info */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                المواعيد القادمة
-              </CardTitle>
-              <CardDescription>المواعيد المحجوزة لعيادتك</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>لا توجد مواعيد قادمة</p>
-                <p className="text-sm mt-2">ستظهر هنا المواعيد المحجوزة من قبل المرضى</p>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-full">
+                    <CreditCard className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">سعر الاستشارة</p>
+                    <p className="text-sm text-muted-foreground">السعر المعروض للمرضى</p>
+                  </div>
+                </div>
+                <p className="text-2xl font-bold">{clinic.consultation_price || 0} دج</p>
               </div>
             </CardContent>
           </Card>

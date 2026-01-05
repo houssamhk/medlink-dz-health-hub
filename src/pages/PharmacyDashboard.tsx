@@ -6,7 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building, MapPin, Clock, Phone, Settings, Pill, Users, TrendingUp, Calendar, CheckCircle, Shield } from 'lucide-react';
+import { 
+  Loader2, Building, MapPin, Clock, Phone, Settings, Pill, Users, 
+  TrendingUp, Calendar, CheckCircle, Shield, Package, ShoppingCart,
+  AlertTriangle, Bell
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Navigate, Link } from 'react-router-dom';
 
@@ -29,6 +33,14 @@ const PharmacyDashboard = () => {
   const [isPharmacist, setIsPharmacist] = useState(false);
   const [pharmacy, setPharmacy] = useState<PharmacyData | null>(null);
   const [updatingDuty, setUpdatingDuty] = useState(false);
+  
+  // Placeholder stats (would come from real data)
+  const [stats, setStats] = useState({
+    todayVisits: 0,
+    prescriptionsReceived: 0,
+    monthlyTotal: 0,
+    lowStockItems: 0
+  });
 
   useEffect(() => {
     if (user) {
@@ -124,7 +136,7 @@ const PharmacyDashboard = () => {
               <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-bold mb-2">لم يتم إعداد الصيدلية</h2>
               <p className="text-muted-foreground mb-4">يرجى إكمال بيانات صيدليتك أولاً</p>
-              <Link to="/pharmacy-profile">
+              <Link to="/profile">
                 <Button>إعداد الصيدلية</Button>
               </Link>
             </CardContent>
@@ -139,9 +151,17 @@ const PharmacyDashboard = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 pt-24" dir="rtl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">لوحة تحكم الصيدلية</h1>
-          <p className="text-muted-foreground">إدارة صيدليتك وحالة المناوبة</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">لوحة تحكم الصيدلية</h1>
+            <p className="text-muted-foreground">إدارة صيدليتك والمخزون</p>
+          </div>
+          <Link to="/profile">
+            <Button variant="outline">
+              <Settings className="h-4 w-4 ml-2" />
+              تعديل البيانات
+            </Button>
+          </Link>
         </div>
 
         {/* Pharmacy Info Card */}
@@ -170,18 +190,13 @@ const PharmacyDashboard = () => {
                 <Badge variant={pharmacy.is_on_duty ? "default" : "secondary"} className="text-lg py-2 px-4">
                   {pharmacy.is_on_duty ? "🟢 مناوبة" : "🔴 غير مناوبة"}
                 </Badge>
-                <Link to="/pharmacy-profile">
-                  <Button variant="outline" size="icon">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </Link>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
             <CardContent className="py-6">
               <div className="flex items-center justify-between">
@@ -205,7 +220,7 @@ const PharmacyDashboard = () => {
                   <Users className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-2xl font-bold">{stats.todayVisits}</p>
                   <p className="text-sm text-muted-foreground">زيارات اليوم</p>
                 </div>
               </div>
@@ -219,7 +234,7 @@ const PharmacyDashboard = () => {
                   <Pill className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-2xl font-bold">{stats.prescriptionsReceived}</p>
                   <p className="text-sm text-muted-foreground">وصفات مستلمة</p>
                 </div>
               </div>
@@ -233,8 +248,8 @@ const PharmacyDashboard = () => {
                   <TrendingUp className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-muted-foreground">إجمالي هذا الشهر</p>
+                  <p className="text-2xl font-bold">{stats.monthlyTotal}</p>
+                  <p className="text-sm text-muted-foreground">إجمالي الشهر</p>
                 </div>
               </div>
             </CardContent>
@@ -243,6 +258,52 @@ const PharmacyDashboard = () => {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Stock/Inventory */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                حالة المخزون
+              </CardTitle>
+              <CardDescription>متابعة توفر الأدوية</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stats.lowStockItems > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-orange-600 bg-orange-50 p-3 rounded-lg">
+                    <AlertTriangle className="h-5 w-5" />
+                    <span>{stats.lowStockItems} أصناف تحتاج إعادة طلب</span>
+                  </div>
+                  {/* Placeholder for low stock items */}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>لا توجد تنبيهات مخزون حالياً</p>
+                  <p className="text-sm mt-2">سيظهر هنا التنبيه عند انخفاض المخزون</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Orders */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                الطلبات الأخيرة
+              </CardTitle>
+              <CardDescription>الوصفات والطلبات المستلمة</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>لا توجد طلبات جديدة</p>
+                <p className="text-sm mt-2">ستظهر هنا الوصفات المرسلة من المرضى</p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Working Hours */}
           <Card>
             <CardHeader>
@@ -275,7 +336,7 @@ const PharmacyDashboard = () => {
                 <div className="text-center py-4 text-muted-foreground">
                   <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>لم يتم تحديد ساعات العمل</p>
-                  <Link to="/pharmacy-profile">
+                  <Link to="/profile">
                     <Button variant="link" size="sm">تحديد الآن</Button>
                   </Link>
                 </div>
@@ -303,7 +364,7 @@ const PharmacyDashboard = () => {
                     <p>خط الطول: {pharmacy.longitude}</p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    سيتم عرض صيدليتك على الخريطة للمرضى القريبين منك
+                    سيتم عرض صيدليتك على الخريطة للمرضى القريبين
                   </p>
                 </div>
               ) : (
@@ -311,29 +372,11 @@ const PharmacyDashboard = () => {
                   <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>لم يتم تحديد الموقع</p>
                   <p className="text-sm mb-2">لن تظهر صيدليتك على الخريطة</p>
-                  <Link to="/pharmacy-profile">
+                  <Link to="/profile">
                     <Button variant="outline" size="sm">تحديد الموقع</Button>
                   </Link>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                النشاط الأخير
-              </CardTitle>
-              <CardDescription>آخر الأنشطة والتحديثات</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>لا توجد أنشطة حالياً</p>
-                <p className="text-sm mt-2">ستظهر هنا الوصفات والطلبات المستلمة</p>
-              </div>
             </CardContent>
           </Card>
         </div>
