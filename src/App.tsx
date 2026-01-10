@@ -30,6 +30,9 @@ import PharmacyDashboard from "./pages/PharmacyDashboard";
 import ClinicDashboard from "./pages/ClinicDashboard";
 import SmartAssistant from "./components/SmartAssistant";
 import NotFound from "./pages/NotFound";
+import Chat from "./pages/Chat";
+import PharmacyInventory from "./pages/PharmacyInventory";
+import UserSettings from "./pages/UserSettings";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +109,13 @@ const App = () => (
             <Route path="/payment" element={<PaymentPage />} />
             <Route path="/family" element={<FamilyMembers />} />
             <Route path="/telemedicine" element={<Telemedicine />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/pharmacy-inventory" element={
+              <ProtectedRoute allowedRoles={['pharmacist']}>
+                <PharmacyInventory />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={<UserSettings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SmartAssistant />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle, Users, Video, Shield, Building, Building2 } from "lucide-react";
+import { Menu, X, Stethoscope, User, LogOut, Settings, Pill, UserCircle, Users, Video, Shield, Building, Building2, MessageCircle, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,16 +171,40 @@ const Navbar = () => {
                           <Video className="w-4 h-4 mr-2" />
                           الطب عن بعد
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/chat')}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          الرسائل
+                        </DropdownMenuItem>
                       </>
                     )}
 
                     {/* Doctor-specific */}
                     {role === 'doctor' && (
-                      <DropdownMenuItem onClick={() => navigate('/doctor-profile')}>
-                        <Settings className="w-4 h-4 mr-2" />
-                        إعدادات الملف
+                      <>
+                        <DropdownMenuItem onClick={() => navigate('/chat')}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          رسائل المرضى
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <Settings className="w-4 h-4 mr-2" />
+                          إعدادات الملف
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
+                    {/* Pharmacist-specific */}
+                    {role === 'pharmacist' && (
+                      <DropdownMenuItem onClick={() => navigate('/pharmacy-inventory')}>
+                        <Package className="w-4 h-4 mr-2" />
+                        إدارة المخزون
                       </DropdownMenuItem>
                     )}
+                    
+                    {/* Settings for all */}
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      الإعدادات
+                    </DropdownMenuItem>
 
                     {/* Admin link */}
                     {role === 'admin' && (
