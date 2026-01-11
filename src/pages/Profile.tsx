@@ -101,18 +101,22 @@ const Profile = () => {
 
     // Fetch role-specific data
     if (role === 'patient') {
+      // Fetch profile data
       const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+      // Fetch medical data from separate secure table
+      const { data: medicalData } = await supabase.from('patient_medical_data').select('*').eq('patient_id', user?.id).maybeSingle();
+      
       if (data) {
         setPatientData({
           full_name: data.full_name || '',
           phone: data.phone || '',
           date_of_birth: data.date_of_birth || '',
           gender: data.gender || '',
-          blood_type: data.blood_type || '',
+          blood_type: medicalData?.blood_type || '',
           wilaya: data.wilaya || '',
           address: data.address || '',
-          allergies: data.allergies || [],
-          chronic_conditions: data.chronic_conditions || []
+          allergies: medicalData?.allergies || [],
+          chronic_conditions: medicalData?.chronic_conditions || []
         });
       }
     } else if (role === 'doctor') {
@@ -203,18 +207,25 @@ const Profile = () => {
 
     try {
       if (role === 'patient') {
-        const { error: e } = await supabase.from('profiles').update({
+        // Update profile data (non-medical)
+        const { error: profileError } = await supabase.from('profiles').update({
           full_name: patientData.full_name,
           phone: patientData.phone,
           date_of_birth: patientData.date_of_birth || null,
           gender: patientData.gender || null,
-          blood_type: patientData.blood_type || null,
           wilaya: patientData.wilaya || null,
           address: patientData.address || null,
+        }).eq('id', user?.id);
+        
+        // Update or insert medical data in separate secure table
+        const { error: medicalError } = await supabase.from('patient_medical_data').upsert({
+          patient_id: user?.id,
+          blood_type: patientData.blood_type || null,
           allergies: patientData.allergies,
           chronic_conditions: patientData.chronic_conditions
-        }).eq('id', user?.id);
-        error = e;
+        }, { onConflict: 'patient_id' });
+        
+        error = profileError || medicalError;
       } else if (role === 'doctor') {
         // Update profile name
         await supabase.from('profiles').update({ full_name: patientData.full_name }).eq('id', user?.id);
