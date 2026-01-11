@@ -1244,20 +1244,16 @@ export type Database = {
       }
       doctors_public: {
         Row: {
-          bio_preview: string | null
           clinic_name: string | null
-          experience_years: number | null
           full_name: string | null
           id: string | null
           is_available: boolean | null
-          is_verified: boolean | null
           rating: number | null
           specialty_id: string | null
           specialty_name_ar: string | null
           specialty_name_fr: string | null
           telemedicine_enabled: boolean | null
           total_reviews: number | null
-          user_id: string | null
           wilaya: string | null
         }
         Relationships: [
@@ -1329,8 +1325,6 @@ export type Database = {
           duty_date: string | null
           id: string | null
           is_on_duty: boolean | null
-          latitude_approx: number | null
-          longitude_approx: number | null
           name: string | null
           wilaya: string | null
         }
@@ -1338,8 +1332,6 @@ export type Database = {
           duty_date?: string | null
           id?: string | null
           is_on_duty?: boolean | null
-          latitude_approx?: never
-          longitude_approx?: never
           name?: string | null
           wilaya?: string | null
         }
@@ -1347,12 +1339,43 @@ export type Database = {
           duty_date?: string | null
           id?: string | null
           is_on_duty?: boolean | null
-          latitude_approx?: never
-          longitude_approx?: never
           name?: string | null
           wilaya?: string | null
         }
         Relationships: []
+      }
+      pharmacy_inventory_public: {
+        Row: {
+          id: string | null
+          in_stock: boolean | null
+          medication_name: string | null
+          pharmacy_id: string | null
+          pharmacy_name: string | null
+          wilaya: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_inventory_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_inventory_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_inventory_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_stats: {
         Row: {
