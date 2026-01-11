@@ -1266,6 +1266,30 @@ export type Database = {
           },
         ]
       }
+      patient_basic_info: {
+        Row: {
+          date_of_birth: string | null
+          full_name: string | null
+          gender: string | null
+          id: string | null
+          wilaya: string | null
+        }
+        Insert: {
+          date_of_birth?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string | null
+          wilaya?: string | null
+        }
+        Update: {
+          date_of_birth?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string | null
+          wilaya?: string | null
+        }
+        Relationships: []
+      }
       pharmacies_full: {
         Row: {
           address: string | null
