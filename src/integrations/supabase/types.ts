@@ -1266,23 +1266,50 @@ export type Database = {
           },
         ]
       }
-      patient_basic_info: {
+      family_members_for_doctors: {
         Row: {
           date_of_birth: string | null
+          gender: string | null
+          id: string | null
+          member_name: string | null
+          primary_user_id: string | null
+          relationship: string | null
+        }
+        Insert: {
+          date_of_birth?: string | null
+          gender?: string | null
+          id?: string | null
+          member_name?: string | null
+          primary_user_id?: string | null
+          relationship?: string | null
+        }
+        Update: {
+          date_of_birth?: string | null
+          gender?: string | null
+          id?: string | null
+          member_name?: string | null
+          primary_user_id?: string | null
+          relationship?: string | null
+        }
+        Relationships: []
+      }
+      patient_basic_info: {
+        Row: {
+          age: number | null
           full_name: string | null
           gender: string | null
           id: string | null
           wilaya: string | null
         }
         Insert: {
-          date_of_birth?: string | null
+          age?: never
           full_name?: string | null
           gender?: string | null
           id?: string | null
           wilaya?: string | null
         }
         Update: {
-          date_of_birth?: string | null
+          age?: never
           full_name?: string | null
           gender?: string | null
           id?: string | null
