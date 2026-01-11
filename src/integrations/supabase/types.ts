@@ -750,6 +750,36 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_medical_data: {
+        Row: {
+          allergies: string[] | null
+          blood_type: string | null
+          chronic_conditions: string[] | null
+          created_at: string | null
+          id: string
+          patient_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          allergies?: string[] | null
+          blood_type?: string | null
+          chronic_conditions?: string[] | null
+          created_at?: string | null
+          id?: string
+          patient_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          allergies?: string[] | null
+          blood_type?: string | null
+          chronic_conditions?: string[] | null
+          created_at?: string | null
+          id?: string
+          patient_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       pharmacies: {
         Row: {
           address: string
@@ -957,10 +987,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
-          allergies: string[] | null
           avatar_url: string | null
-          blood_type: string | null
-          chronic_conditions: string[] | null
           created_at: string | null
           date_of_birth: string | null
           email: string | null
@@ -973,10 +1000,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          allergies?: string[] | null
           avatar_url?: string | null
-          blood_type?: string | null
-          chronic_conditions?: string[] | null
           created_at?: string | null
           date_of_birth?: string | null
           email?: string | null
@@ -989,10 +1013,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          allergies?: string[] | null
           avatar_url?: string | null
-          blood_type?: string | null
-          chronic_conditions?: string[] | null
           created_at?: string | null
           date_of_birth?: string | null
           email?: string | null
