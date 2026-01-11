@@ -157,6 +157,20 @@ export type Database = {
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clinic_capacity: {
@@ -307,6 +321,20 @@ export type Database = {
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "doctor_capacity_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_capacity_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       doctor_evaluations: {
@@ -346,6 +374,20 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_evaluations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_evaluations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
           {
@@ -592,10 +634,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "medical_records_assigned_doctor_id_fkey"
+            columns: ["assigned_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_assigned_doctor_id_fkey"
+            columns: ["assigned_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "medical_records_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
         ]
@@ -779,6 +849,20 @@ export type Database = {
             referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pharmacy_inventory_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_inventory_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       prescriptions: {
@@ -834,10 +918,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "prescriptions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "prescriptions_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_public"
             referencedColumns: ["id"]
           },
         ]
@@ -934,6 +1046,20 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1044,6 +1170,20 @@ export type Database = {
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "telemedicine_sessions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemedicine_sessions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -1066,6 +1206,154 @@ export type Database = {
       }
     }
     Views: {
+      doctors_full: {
+        Row: {
+          accepts_insurance: boolean | null
+          avatar_url: string | null
+          bio: string | null
+          clinic_address: string | null
+          clinic_name: string | null
+          consultation_price: number | null
+          created_at: string | null
+          experience_years: number | null
+          full_name: string | null
+          id: string | null
+          is_available: boolean | null
+          is_verified: boolean | null
+          license_number: string | null
+          rating: number | null
+          specialty_id: string | null
+          specialty_name_ar: string | null
+          specialty_name_fr: string | null
+          telemedicine_enabled: boolean | null
+          total_reviews: number | null
+          updated_at: string | null
+          user_id: string | null
+          wilaya: string | null
+          working_hours: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctors_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctors_public: {
+        Row: {
+          bio_preview: string | null
+          clinic_name: string | null
+          experience_years: number | null
+          full_name: string | null
+          id: string | null
+          is_available: boolean | null
+          is_verified: boolean | null
+          rating: number | null
+          specialty_id: string | null
+          specialty_name_ar: string | null
+          specialty_name_fr: string | null
+          telemedicine_enabled: boolean | null
+          total_reviews: number | null
+          user_id: string | null
+          wilaya: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctors_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacies_full: {
+        Row: {
+          address: string | null
+          clinic_latitude: number | null
+          clinic_longitude: number | null
+          created_at: string | null
+          duty_date: string | null
+          id: string | null
+          is_on_duty: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          opening_hours: Json | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string | null
+          wilaya: string | null
+        }
+        Insert: {
+          address?: string | null
+          clinic_latitude?: number | null
+          clinic_longitude?: number | null
+          created_at?: string | null
+          duty_date?: string | null
+          id?: string | null
+          is_on_duty?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          opening_hours?: Json | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          wilaya?: string | null
+        }
+        Update: {
+          address?: string | null
+          clinic_latitude?: number | null
+          clinic_longitude?: number | null
+          created_at?: string | null
+          duty_date?: string | null
+          id?: string | null
+          is_on_duty?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          opening_hours?: Json | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          wilaya?: string | null
+        }
+        Relationships: []
+      }
+      pharmacies_public: {
+        Row: {
+          duty_date: string | null
+          id: string | null
+          is_on_duty: boolean | null
+          latitude_approx: number | null
+          longitude_approx: number | null
+          name: string | null
+          wilaya: string | null
+        }
+        Insert: {
+          duty_date?: string | null
+          id?: string | null
+          is_on_duty?: boolean | null
+          latitude_approx?: never
+          longitude_approx?: never
+          name?: string | null
+          wilaya?: string | null
+        }
+        Update: {
+          duty_date?: string | null
+          id?: string | null
+          is_on_duty?: boolean | null
+          latitude_approx?: never
+          longitude_approx?: never
+          name?: string | null
+          wilaya?: string | null
+        }
+        Relationships: []
+      }
       platform_stats: {
         Row: {
           completed_appointments: number | null
@@ -1079,7 +1367,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      is_authenticated: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "patient" | "doctor" | "pharmacist" | "lab_admin" | "admin"
