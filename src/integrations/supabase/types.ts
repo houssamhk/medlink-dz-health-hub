@@ -1431,6 +1431,14 @@ export type Database = {
           wilaya: string
         }[]
       }
+      get_patient_medical_info: {
+        Args: { p_patient_id: string }
+        Returns: {
+          allergies: string[]
+          blood_type: string
+          chronic_conditions: string[]
+        }[]
+      }
       is_authenticated: { Args: never; Returns: boolean }
     }
     Enums: {
