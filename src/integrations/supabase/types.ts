@@ -171,6 +171,13 @@ export type Database = {
             referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clinic_capacity: {
@@ -335,6 +342,13 @@ export type Database = {
             referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "doctor_capacity_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       doctor_evaluations: {
@@ -388,6 +402,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_evaluations_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
             referencedColumns: ["id"]
           },
           {
@@ -648,6 +669,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "medical_records_assigned_doctor_id_fkey"
+            columns: ["assigned_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "medical_records_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
@@ -666,6 +694,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -962,6 +997,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "prescriptions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "prescriptions_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: false
@@ -1081,6 +1123,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1205,6 +1254,13 @@ export type Database = {
             referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "telemedicine_sessions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -1276,6 +1332,37 @@ export type Database = {
           telemedicine_enabled: boolean | null
           total_reviews: number | null
           wilaya: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctors_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctors_public_safe: {
+        Row: {
+          accepts_insurance: boolean | null
+          avatar_url: string | null
+          bio: string | null
+          clinic_address: string | null
+          clinic_name: string | null
+          consultation_price: number | null
+          experience_years: number | null
+          full_name: string | null
+          id: string | null
+          is_available: boolean | null
+          rating: number | null
+          specialty_id: string | null
+          specialty_name_ar: string | null
+          specialty_name_fr: string | null
+          telemedicine_enabled: boolean | null
+          total_reviews: number | null
+          wilaya: string | null
+          working_hours: Json | null
         }
         Relationships: [
           {
@@ -1411,6 +1498,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_doctor_license_number: {
+        Args: { doctor_id: string }
+        Returns: string
+      }
       get_family_members_for_appointment: {
         Args: { patient_id: string }
         Returns: {
@@ -1419,6 +1510,30 @@ export type Database = {
           id: string
           member_name: string
           relationship: string
+        }[]
+      }
+      get_my_doctor_profile: {
+        Args: never
+        Returns: {
+          accepts_insurance: boolean
+          bio: string
+          clinic_address: string
+          clinic_name: string
+          consultation_price: number
+          created_at: string
+          experience_years: number
+          id: string
+          is_available: boolean
+          is_verified: boolean
+          license_number: string
+          rating: number
+          specialty_id: string
+          telemedicine_enabled: boolean
+          total_reviews: number
+          updated_at: string
+          user_id: string
+          wilaya: string
+          working_hours: Json
         }[]
       }
       get_patient_basic_info: {
