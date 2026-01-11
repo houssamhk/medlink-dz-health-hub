@@ -1266,57 +1266,6 @@ export type Database = {
           },
         ]
       }
-      family_members_for_doctors: {
-        Row: {
-          date_of_birth: string | null
-          gender: string | null
-          id: string | null
-          member_name: string | null
-          primary_user_id: string | null
-          relationship: string | null
-        }
-        Insert: {
-          date_of_birth?: string | null
-          gender?: string | null
-          id?: string | null
-          member_name?: string | null
-          primary_user_id?: string | null
-          relationship?: string | null
-        }
-        Update: {
-          date_of_birth?: string | null
-          gender?: string | null
-          id?: string | null
-          member_name?: string | null
-          primary_user_id?: string | null
-          relationship?: string | null
-        }
-        Relationships: []
-      }
-      patient_basic_info: {
-        Row: {
-          age: number | null
-          full_name: string | null
-          gender: string | null
-          id: string | null
-          wilaya: string | null
-        }
-        Insert: {
-          age?: never
-          full_name?: string | null
-          gender?: string | null
-          id?: string | null
-          wilaya?: string | null
-        }
-        Update: {
-          age?: never
-          full_name?: string | null
-          gender?: string | null
-          id?: string | null
-          wilaya?: string | null
-        }
-        Relationships: []
-      }
       pharmacies_full: {
         Row: {
           address: string | null
@@ -1441,6 +1390,26 @@ export type Database = {
       }
     }
     Functions: {
+      get_family_members_for_appointment: {
+        Args: { patient_id: string }
+        Returns: {
+          age: number
+          gender: string
+          id: string
+          member_name: string
+          relationship: string
+        }[]
+      }
+      get_patient_basic_info: {
+        Args: { patient_id: string }
+        Returns: {
+          age: number
+          full_name: string
+          gender: string
+          id: string
+          wilaya: string
+        }[]
+      }
       is_authenticated: { Args: never; Returns: boolean }
     }
     Enums: {
