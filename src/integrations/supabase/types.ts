@@ -1498,6 +1498,17 @@ export type Database = {
       }
     }
     Functions: {
+      create_notification: {
+        Args: {
+          p_message: string
+          p_related_id?: string
+          p_related_type?: string
+          p_title: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_doctor_license_number: {
         Args: { doctor_id: string }
         Returns: string

@@ -34,12 +34,11 @@ const PharmacyDashboard = () => {
   const [pharmacy, setPharmacy] = useState<PharmacyData | null>(null);
   const [updatingDuty, setUpdatingDuty] = useState(false);
   
-  // Placeholder stats (would come from real data)
   const [stats, setStats] = useState({
     todayVisits: 0,
     prescriptionsReceived: 0,
-    monthlyTotal: 0,
-    lowStockItems: 0
+    lowStockItems: 0,
+    totalInventory: 0
   });
 
   useEffect(() => {
@@ -68,6 +67,44 @@ const PharmacyDashboard = () => {
         .maybeSingle();
 
       setPharmacy(pharmacyData);
+
+      if (pharmacyData) {
+        // Fetch real stats
+        const [prescriptionsRes, inventoryRes, lowStockRes] = await Promise.all([
+          // Prescriptions sent to this pharmacy
+          supabase
+            .from('prescriptions')
+            .select('id', { count: 'exact', head: true })
+            .eq('pharmacy_id', pharmacyData.id)
+            .in('status', ['pending', 'processing']),
+          // Total inventory items
+          supabase
+            .from('pharmacy_inventory')
+            .select('id', { count: 'exact', head: true })
+            .eq('pharmacy_id', pharmacyData.id),
+          // Low stock items
+          supabase
+            .from('pharmacy_inventory')
+            .select('id')
+            .eq('pharmacy_id', pharmacyData.id)
+            .lt('quantity', supabase.rpc ? 10 : 10) // items below min_quantity
+        ]);
+
+        // Count low stock by checking quantity < min_quantity
+        const { data: lowStockData } = await supabase
+          .from('pharmacy_inventory')
+          .select('id, quantity, min_quantity')
+          .eq('pharmacy_id', pharmacyData.id);
+        
+        const lowStock = lowStockData?.filter(item => item.quantity < (item.min_quantity || 10)).length || 0;
+
+        setStats({
+          todayVisits: 0, // Would need a visits tracking table
+          prescriptionsReceived: prescriptionsRes.count || 0,
+          lowStockItems: lowStock,
+          totalInventory: inventoryRes.count || 0
+        });
+      }
     }
 
     setLoading(false);
@@ -248,8 +285,8 @@ const PharmacyDashboard = () => {
                   <TrendingUp className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.monthlyTotal}</p>
-                  <p className="text-sm text-muted-foreground">إجمالي الشهر</p>
+                  <p className="text-2xl font-bold">{stats.totalInventory}</p>
+                  <p className="text-sm text-muted-foreground">أصناف المخزون</p>
                 </div>
               </div>
             </CardContent>
@@ -261,10 +298,17 @@ const PharmacyDashboard = () => {
           {/* Stock/Inventory */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                حالة المخزون
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  حالة المخزون
+                </CardTitle>
+                <Link to="/pharmacy-inventory">
+                  <Button variant="outline" size="sm">
+                    إدارة المخزون
+                  </Button>
+                </Link>
+              </div>
               <CardDescription>متابعة توفر الأدوية</CardDescription>
             </CardHeader>
             <CardContent>
@@ -274,7 +318,9 @@ const PharmacyDashboard = () => {
                     <AlertTriangle className="h-5 w-5" />
                     <span>{stats.lowStockItems} أصناف تحتاج إعادة طلب</span>
                   </div>
-                  {/* Placeholder for low stock items */}
+                  <Link to="/pharmacy-inventory">
+                    <Button variant="outline" className="w-full">عرض التفاصيل</Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
