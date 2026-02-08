@@ -157,14 +157,40 @@ const AdminDashboard = () => {
       );
     }
 
-    // Monthly data (last 6 months)
+    // Monthly data - fetch real data from appointments
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const { data: monthlyAppointments } = await supabase
+      .from('appointments')
+      .select('created_at, status')
+      .gte('created_at', sixMonthsAgo.toISOString());
+
+    const { data: monthlyRecords } = await supabase
+      .from('medical_records')
+      .select('created_at')
+      .gte('created_at', sixMonthsAgo.toISOString());
+
     const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
     const now = new Date();
     const monthlyStats = [];
+    
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = months[date.getMonth()];
-      monthlyStats.push({ month: monthName, appointments: Math.floor(Math.random() * 50) + 10, records: Math.floor(Math.random() * 30) + 5 });
+      const monthIndex = date.getMonth();
+      const year = date.getFullYear();
+      
+      const appointmentsInMonth = monthlyAppointments?.filter(a => {
+        const d = new Date(a.created_at);
+        return d.getMonth() === monthIndex && d.getFullYear() === year;
+      }).length || 0;
+      
+      const recordsInMonth = monthlyRecords?.filter(r => {
+        const d = new Date(r.created_at);
+        return d.getMonth() === monthIndex && d.getFullYear() === year;
+      }).length || 0;
+      
+      monthlyStats.push({ month: months[monthIndex], appointments: appointmentsInMonth, records: recordsInMonth });
     }
     setMonthlyData(monthlyStats);
 

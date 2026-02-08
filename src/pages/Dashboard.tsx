@@ -36,6 +36,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recordsCount, setRecordsCount] = useState(0);
 
   useEffect(() => {
     if (authLoading || roleLoading) return;
@@ -52,36 +53,45 @@ const Dashboard = () => {
   }, [user, role, authLoading, roleLoading, navigate, getDashboardRoute]);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
+    const fetchData = async () => {
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('appointments')
-        .select(`
-          id,
-          appointment_date,
-          appointment_time,
-          status,
-          reason,
-          doctors (
-            clinic_name,
-            specialties (
-              name_ar
+      // Fetch appointments and records count in parallel
+      const [appointmentsRes, recordsRes] = await Promise.all([
+        supabase
+          .from('appointments')
+          .select(`
+            id,
+            appointment_date,
+            appointment_time,
+            status,
+            reason,
+            doctors (
+              clinic_name,
+              specialties (
+                name_ar
+              )
             )
-          )
-        `)
-        .eq('patient_id', user.id)
-        .order('appointment_date', { ascending: true })
-        .limit(5);
+          `)
+          .eq('patient_id', user.id)
+          .order('appointment_date', { ascending: true })
+          .limit(5),
+        supabase
+          .from('medical_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', user.id)
+      ]);
 
-      if (!error && data) {
-        setAppointments(data as Appointment[]);
+      if (!appointmentsRes.error && appointmentsRes.data) {
+        setAppointments(appointmentsRes.data as Appointment[]);
       }
+      
+      setRecordsCount(recordsRes.count || 0);
       setLoading(false);
     };
 
     if (user) {
-      fetchAppointments();
+      fetchData();
     }
   }, [user]);
 
@@ -103,7 +113,7 @@ const Dashboard = () => {
     },
     {
       title: 'السجلات الطبية',
-      value: 0,
+      value: recordsCount,
       icon: FileText,
       color: 'text-secondary',
       bg: 'bg-secondary/10',
@@ -217,7 +227,7 @@ const Dashboard = () => {
               <Calendar className="w-5 h-5 text-primary" />
               المواعيد القادمة
             </CardTitle>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/medical-record')}>
               عرض الكل
             </Button>
           </CardHeader>

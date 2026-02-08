@@ -36,8 +36,8 @@ const ClinicDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [clinic, setClinic] = useState<ClinicData | null>(null);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
+  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   
-  // Placeholder stats
   const [stats, setStats] = useState({
     todayAppointments: 0,
     totalCapacity: 20,
@@ -60,6 +60,40 @@ const ClinicDashboard = () => {
       .maybeSingle();
 
     setClinic(clinicData);
+
+    if (clinicData) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch real data in parallel
+      const [appointmentsRes, capacityRes] = await Promise.all([
+        // Today's appointments for doctors in this clinic (if any)
+        supabase
+          .from('appointments')
+          .select('id, appointment_date, appointment_time, status, patient_id')
+          .eq('appointment_date', today)
+          .in('status', ['pending', 'confirmed']),
+        // Clinic capacity for today
+        supabase
+          .from('clinic_capacity')
+          .select('*')
+          .eq('clinic_id', clinicData.id)
+          .eq('date', today)
+          .maybeSingle()
+      ]);
+
+      const todayAppts = appointmentsRes.data || [];
+      setTodayAppointments(todayAppts);
+      
+      const capacity = capacityRes.data;
+      
+      setStats({
+        todayAppointments: todayAppts.length,
+        totalCapacity: capacity?.total_rooms || capacity?.total_beds || 20,
+        currentOccupancy: (capacity?.total_rooms || 0) - (capacity?.available_rooms || 0),
+        waitingPatients: todayAppts.filter(a => a.status === 'pending').length
+      });
+    }
+
     setLoading(false);
   };
 
