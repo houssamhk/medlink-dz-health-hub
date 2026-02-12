@@ -419,15 +419,44 @@ const AdminDashboard = () => {
                   <CardDescription>تقارير جاهزة للتحميل</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={() => {
+                    const csv = ['الاسم,التخصص,الولاية,الحالة', ...doctors.filter(d => d.is_verified).map(d =>
+                      `${d.profiles?.full_name || ''},${d.specialties?.name_ar || ''},${d.wilaya},موثق`
+                    )].join('\n');
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'verified-doctors.csv';
+                    link.click();
+                  }}>
                     <Download className="h-4 w-4 ml-2" />
                     تقرير الأطباء الموثقين
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={async () => {
+                    const { data } = await supabase.from('appointments').select('appointment_date, appointment_time, status').order('appointment_date', { ascending: false }).limit(500);
+                    if (data) {
+                      const csv = ['التاريخ,الوقت,الحالة', ...data.map(a => `${a.appointment_date},${a.appointment_time},${a.status}`)].join('\n');
+                      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = 'appointments-report.csv';
+                      link.click();
+                    }
+                  }}>
                     <Download className="h-4 w-4 ml-2" />
                     تقرير المواعيد الشهري
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={async () => {
+                    const { data } = await supabase.from('pharmacies').select('name, address, wilaya, is_on_duty, duty_date');
+                    if (data) {
+                      const csv = ['الاسم,العنوان,الولاية,مناوبة,تاريخ المناوبة', ...data.map(p => `${p.name},${p.address},${p.wilaya},${p.is_on_duty ? 'نعم' : 'لا'},${p.duty_date || ''}`)].join('\n');
+                      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = 'pharmacies-report.csv';
+                      link.click();
+                    }
+                  }}>
                     <Download className="h-4 w-4 ml-2" />
                     تقرير الصيدليات المناوبة
                   </Button>
@@ -437,17 +466,66 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>إعدادات النظام</CardTitle>
-                <CardDescription>تكوين إعدادات المنصة</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-center py-8">
-                  إعدادات النظام قيد التطوير
-                </p>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>إعدادات عامة</CardTitle>
+                  <CardDescription>إعدادات المنصة الأساسية</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">تفعيل التسجيل الجديد</p>
+                      <p className="text-sm text-muted-foreground">السماح للمستخدمين الجدد بالتسجيل</p>
+                    </div>
+                    <Badge className="bg-green-500">مفعّل</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">الطب عن بعد</p>
+                      <p className="text-sm text-muted-foreground">تفعيل الاستشارات عبر الفيديو</p>
+                    </div>
+                    <Badge className="bg-green-500">مفعّل</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">نظام الطوارئ SOS</p>
+                      <p className="text-sm text-muted-foreground">زر الطوارئ للمرضى</p>
+                    </div>
+                    <Badge className="bg-green-500">مفعّل</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">تحليل الذكاء الاصطناعي</p>
+                      <p className="text-sm text-muted-foreground">تحليل التقارير الطبية بالذكاء الاصطناعي</p>
+                    </div>
+                    <Badge className="bg-green-500">مفعّل</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>الإحصائيات السريعة</CardTitle>
+                  <CardDescription>ملخص حالة النظام</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <p className="font-medium">أطباء بانتظار التوثيق</p>
+                    <Badge variant="secondary">{doctors.filter(d => !d.is_verified).length}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <p className="font-medium">طلبات طوارئ نشطة</p>
+                    <Badge variant="secondary">-</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <p className="font-medium">نسبة إكمال المواعيد</p>
+                    <Badge className="bg-blue-500">
+                      {stats ? Math.round((stats.completed_appointments / Math.max(stats.total_appointments, 1)) * 100) : 0}%
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
