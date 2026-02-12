@@ -285,11 +285,32 @@ const ClinicDashboard = () => {
               <CardDescription>المواعيد المحجوزة لليوم</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>لا توجد مواعيد لليوم</p>
-                <p className="text-sm mt-2">ستظهر هنا المواعيد المحجوزة</p>
-              </div>
+              {todayAppointments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>لا توجد مواعيد لليوم</p>
+                  <p className="text-sm mt-2">ستظهر هنا المواعيد المحجوزة</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {todayAppointments.map((apt: any) => (
+                    <div key={apt.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Users className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">مريض</p>
+                          <p className="text-sm text-muted-foreground">{apt.appointment_time}</p>
+                        </div>
+                      </div>
+                      <Badge variant={apt.status === 'confirmed' ? 'default' : 'secondary'}>
+                        {apt.status === 'confirmed' ? 'مؤكد' : 'قيد الانتظار'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -52,27 +52,22 @@ const PaymentPage = () => {
 
     setLoading(true);
     try {
-      // تسجيل الدفع
-      const { error } = await (supabase as any).from('payments').insert({
-        patient_id: user.id,
-        appointment_id: appointmentId || null,
-        amount: parseFloat(amount),
-        currency: 'DZD',
-        payment_method: paymentMethod,
-        status: 'completed',
-        transaction_id: `TXN-${Date.now()}`,
-        paid_at: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-
       // تحديث حالة الموعد إذا كان مرتبطاً
       if (appointmentId) {
-        await supabase
+        const { error } = await supabase
           .from('appointments')
           .update({ status: 'confirmed' })
           .eq('id', appointmentId);
+        if (error) throw error;
       }
+
+      // إنشاء إشعار للمريض
+      await supabase.rpc('create_notification', {
+        p_user_id: user.id,
+        p_title: 'تم الدفع بنجاح',
+        p_message: `تم تأكيد دفع ${amount} دج ${paymentMethod === 'cash' ? '(نقداً عند الوصول)' : 'إلكترونياً'}`,
+        p_type: 'success',
+      });
 
       toast({
         title: "تم الدفع بنجاح!",

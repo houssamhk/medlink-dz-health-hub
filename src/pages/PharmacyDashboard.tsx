@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Navigate, Link } from 'react-router-dom';
+import RecentPrescriptions from '@/components/pharmacy/RecentPrescriptions';
 
 interface PharmacyData {
   id: string;
@@ -333,22 +334,7 @@ const PharmacyDashboard = () => {
           </Card>
 
           {/* Recent Orders */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                الطلبات الأخيرة
-              </CardTitle>
-              <CardDescription>الوصفات والطلبات المستلمة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>لا توجد طلبات جديدة</p>
-                <p className="text-sm mt-2">ستظهر هنا الوصفات المرسلة من المرضى</p>
-              </div>
-            </CardContent>
-          </Card>
+          <RecentPrescriptions pharmacyId={pharmacy.id} />
 
           {/* Working Hours */}
           <Card>
