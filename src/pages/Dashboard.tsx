@@ -14,6 +14,9 @@ import {
   User,
   Activity,
   Loader2,
+  Pill,
+  Users,
+  Video,
 } from 'lucide-react';
 
 interface Appointment {
@@ -220,6 +223,36 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* More Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="border-border/50 gradient-card">
+            <CardContent className="p-4">
+              <Pill className="w-8 h-8 text-primary mb-2" />
+              <h3 className="font-semibold mb-1">الوصفات الطبية</h3>
+              <p className="text-sm text-muted-foreground mb-3">إدارة وصفاتك</p>
+              <Button size="sm" variant="outline" onClick={() => navigate('/prescriptions')}>عرض</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 gradient-card">
+            <CardContent className="p-4">
+              <Users className="w-8 h-8 text-secondary mb-2" />
+              <h3 className="font-semibold mb-1">أفراد العائلة</h3>
+              <p className="text-sm text-muted-foreground mb-3">إدارة حسابات العائلة</p>
+              <Button size="sm" variant="secondary" onClick={() => navigate('/family')}>إدارة</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 gradient-card">
+            <CardContent className="p-4">
+              <Video className="w-8 h-8 text-accent mb-2" />
+              <h3 className="font-semibold mb-1">الطب عن بعد</h3>
+              <p className="text-sm text-muted-foreground mb-3">جلسات الفيديو</p>
+              <Button size="sm" variant="outline" onClick={() => navigate('/telemedicine')}>عرض</Button>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Appointments */}
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -272,7 +305,31 @@ const Dashboard = () => {
                         {appointment.appointment_time}
                       </p>
                     </div>
-                    {getStatusBadge(appointment.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(appointment.status)}
+                      {(appointment.status === 'pending' || appointment.status === 'confirmed') && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm('هل أنت متأكد من إلغاء هذا الموعد؟')) return;
+                            const { error } = await supabase
+                              .from('appointments')
+                              .update({ status: 'cancelled' as any })
+                              .eq('id', appointment.id);
+                            if (!error) {
+                              setAppointments(prev => prev.map(a => 
+                                a.id === appointment.id ? { ...a, status: 'cancelled' } : a
+                              ));
+                            }
+                          }}
+                        >
+                          إلغاء
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

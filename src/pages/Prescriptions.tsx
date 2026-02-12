@@ -66,19 +66,39 @@ const Prescriptions = () => {
       if (!user) return;
 
       // جلب الوصفات
-      const { data: prescriptionsData } = await (supabase as any)
+      const { data: prescriptionsData } = await supabase
         .from('prescriptions')
         .select(`
           *,
           doctors (
             clinic_name,
+            user_id,
             specialties (name_ar)
           )
         `)
         .eq('patient_id', user.id)
         .order('created_at', { ascending: false });
 
-      setPrescriptions((prescriptionsData as unknown as Prescription[]) || []);
+      if (prescriptionsData) {
+        // Enrich with doctor names from profiles
+        const doctorUserIds = prescriptionsData.map((p: any) => p.doctors?.user_id).filter(Boolean);
+        let profilesMap: Record<string, string> = {};
+        if (doctorUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', doctorUserIds);
+          profiles?.forEach(p => { profilesMap[p.id] = p.full_name || 'طبيب'; });
+        }
+        const enriched = prescriptionsData.map((p: any) => ({
+          ...p,
+          doctors: {
+            ...p.doctors,
+            profiles: { full_name: profilesMap[p.doctors?.user_id] || 'طبيب' }
+          }
+        }));
+        setPrescriptions(enriched as unknown as Prescription[]);
+      }
 
       // جلب الصيدليات
       const { data: pharmaciesData } = await supabase
