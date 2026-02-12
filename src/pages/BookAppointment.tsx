@@ -107,7 +107,20 @@ const BookAppointment = () => {
 
     if (error) {
       console.error('Error fetching doctors:', error);
-    } else {
+    } else if (data) {
+      // Fetch doctor profiles (names)
+      const userIds = data.map((d: any) => d.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      
+      // Enrich doctors with profile names
+      const enrichedData = data.map((doc: any) => ({
+        ...doc,
+        profiles: profiles?.find(p => p.id === doc.user_id)
+      }));
+
       // حساب المواعيد المتاحة لكل طبيب
       const today = new Date().toISOString().split('T')[0];
       const { data: capacities } = await supabase
@@ -115,7 +128,7 @@ const BookAppointment = () => {
         .select('*')
         .eq('date', today);
 
-      const doctorsWithSlots = (data || []).map(doctor => {
+      const doctorsWithSlots = enrichedData.map(doctor => {
         const capacity = capacities?.find(c => c.doctor_id === doctor.id);
         const maxAppointments = capacity?.max_appointments || 20;
         const currentAppointments = capacity?.current_appointments || 0;

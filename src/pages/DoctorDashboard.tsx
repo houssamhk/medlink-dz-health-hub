@@ -260,7 +260,7 @@ const DoctorDashboard = () => {
     }
   };
 
-  const startConsultation = (appointment: Appointment) => {
+  const startConsultation = async (appointment: Appointment) => {
     const now = new Date();
     const appointmentTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
     const diff = (appointmentTime.getTime() - now.getTime()) / (1000 * 60);
@@ -269,9 +269,27 @@ const DoctorDashboard = () => {
       toast({ title: "انتظر", description: "لا يمكن بدء الاستشارة قبل 15 دقيقة من الموعد", variant: "destructive" });
       return;
     }
+
+    // إنشاء جلسة طب عن بعد
+    const { data: session, error } = await supabase
+      .from('telemedicine_sessions')
+      .insert({
+        appointment_id: appointment.id,
+        doctor_id: doctorInfo?.id,
+        patient_id: appointment.patient_id,
+        scheduled_at: `${appointment.appointment_date}T${appointment.appointment_time}`,
+        status: 'scheduled'
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      toast({ title: "خطأ", description: "فشل إنشاء الجلسة", variant: "destructive" });
+      return;
+    }
     
-    toast({ title: "جاري التحضير", description: "جاري تحضير غرفة الاستشارة..." });
-    // Here you would navigate to telemedicine room
+    // الانتقال لصفحة الطب عن بعد
+    window.location.href = `/telemedicine?session=${session.id}`;
   };
 
   const getUrgencyBadge = (level: string) => {
