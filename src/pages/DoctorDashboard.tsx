@@ -78,11 +78,56 @@ const DoctorDashboard = () => {
   
   // Prescription writing state
   const [prescriptionPatientId, setPrescriptionPatientId] = useState('');
-  const [prescriptionMedications, setPrescriptionMedications] = useState([
-    { name: '', dosage: '', frequency: '', duration: '' }
-  ]);
+  const [prescriptionMedications, setPrescriptionMedications] = useState<Array<{name: string; dosage: string; frequency: string; duration: string; notes: string}>>([]);
   const [prescriptionNotes, setPrescriptionNotes] = useState('');
   const [prescriptionSubmitting, setPrescriptionSubmitting] = useState(false);
+  const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '', duration: '', notes: '' });
+  const [showMedSuggestions, setShowMedSuggestions] = useState(false);
+
+  // Common medications database
+  const commonMedications = [
+    { name: 'أموكسيسيلين', dosages: ['250mg', '500mg', '1g'], category: 'مضاد حيوي' },
+    { name: 'إيبوبروفين', dosages: ['200mg', '400mg', '600mg'], category: 'مضاد التهاب' },
+    { name: 'باراسيتامول', dosages: ['500mg', '1g'], category: 'مسكن' },
+    { name: 'أموكسيسيلين + حمض الكلافولانيك', dosages: ['625mg', '1g'], category: 'مضاد حيوي' },
+    { name: 'أزيثروميسين', dosages: ['250mg', '500mg'], category: 'مضاد حيوي' },
+    { name: 'سيبروفلوكساسين', dosages: ['250mg', '500mg', '750mg'], category: 'مضاد حيوي' },
+    { name: 'أوميبرازول', dosages: ['20mg', '40mg'], category: 'معدة' },
+    { name: 'ميتفورمين', dosages: ['500mg', '850mg', '1000mg'], category: 'سكري' },
+    { name: 'أملوديبين', dosages: ['5mg', '10mg'], category: 'ضغط' },
+    { name: 'أتورفاستاتين', dosages: ['10mg', '20mg', '40mg'], category: 'كوليسترول' },
+    { name: 'ديكلوفيناك', dosages: ['25mg', '50mg', '75mg'], category: 'مضاد التهاب' },
+    { name: 'لوراتادين', dosages: ['10mg'], category: 'حساسية' },
+    { name: 'سيتيريزين', dosages: ['10mg'], category: 'حساسية' },
+    { name: 'سالبوتامول بخاخ', dosages: ['100mcg'], category: 'تنفسي' },
+    { name: 'ميترونيدازول', dosages: ['250mg', '500mg'], category: 'مضاد طفيلي' },
+  ];
+
+  const frequencyOptions = [
+    'مرة واحدة يومياً',
+    'مرتين يومياً',
+    '3 مرات يومياً',
+    '4 مرات يومياً',
+    'كل 8 ساعات',
+    'كل 12 ساعة',
+    'عند الحاجة',
+    'قبل النوم',
+  ];
+
+  const durationOptions = [
+    '3 أيام',
+    '5 أيام',
+    '7 أيام',
+    '10 أيام',
+    '14 يوم',
+    '21 يوم',
+    '30 يوم',
+    'مستمر',
+  ];
+
+  const filteredMedications = newMed.name.length > 0
+    ? commonMedications.filter(m => m.name.includes(newMed.name))
+    : commonMedications;
 
   useEffect(() => {
     if (user) {
@@ -269,22 +314,27 @@ const DoctorDashboard = () => {
     }
   };
 
-  const addMedication = () => {
-    setPrescriptionMedications([...prescriptionMedications, { name: '', dosage: '', frequency: '', duration: '' }]);
+  const addMedicationToList = () => {
+    if (!newMed.name || !newMed.dosage || !newMed.frequency) {
+      toast({ title: "تنبيه", description: "يرجى ملء اسم الدواء والجرعة والتكرار", variant: "destructive" });
+      return;
+    }
+    setPrescriptionMedications([...prescriptionMedications, { ...newMed }]);
+    setNewMed({ name: '', dosage: '', frequency: '', duration: '', notes: '' });
+    setShowMedSuggestions(false);
   };
 
   const removeMedication = (index: number) => {
     setPrescriptionMedications(prescriptionMedications.filter((_, i) => i !== index));
   };
 
-  const updateMedication = (index: number, field: string, value: string) => {
-    const updated = [...prescriptionMedications];
-    updated[index] = { ...updated[index], [field]: value };
-    setPrescriptionMedications(updated);
+  const selectSuggestedMed = (med: typeof commonMedications[0]) => {
+    setNewMed({ ...newMed, name: med.name, dosage: med.dosages[0] });
+    setShowMedSuggestions(false);
   };
 
   const submitPrescription = async () => {
-    if (!prescriptionPatientId || prescriptionMedications.every(m => !m.name)) {
+    if (!prescriptionPatientId || prescriptionMedications.length === 0) {
       toast({ title: "خطأ", description: "يرجى اختيار المريض وإضافة دواء واحد على الأقل", variant: "destructive" });
       return;
     }
@@ -294,7 +344,7 @@ const DoctorDashboard = () => {
       const { error } = await supabase.from('prescriptions').insert({
         doctor_id: doctorInfo?.id,
         patient_id: prescriptionPatientId,
-        medications: prescriptionMedications.filter(m => m.name),
+        medications: prescriptionMedications,
         notes: prescriptionNotes,
         status: 'pending'
       });
@@ -311,7 +361,8 @@ const DoctorDashboard = () => {
 
       toast({ title: "تم", description: "تم إرسال الوصفة الطبية بنجاح" });
       setPrescriptionPatientId('');
-      setPrescriptionMedications([{ name: '', dosage: '', frequency: '', duration: '' }]);
+      setPrescriptionMedications([]);
+      setNewMed({ name: '', dosage: '', frequency: '', duration: '', notes: '' });
       setPrescriptionNotes('');
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message || "حدث خطأ", variant: "destructive" });
@@ -804,98 +855,201 @@ const DoctorDashboard = () => {
 
             {/* Prescriptions Tab */}
             <TabsContent value="prescriptions">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Pill className="h-5 w-5" />
-                    كتابة وصفة طبية
-                  </CardTitle>
-                  <CardDescription>اختر المريض وأضف الأدوية والجرعات</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Patient Selection from today's appointments */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">اختر المريض *</label>
-                    <Select value={prescriptionPatientId} onValueChange={setPrescriptionPatientId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر مريضاً من مواعيد اليوم" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {todayAppointments.map((apt) => (
-                          <SelectItem key={apt.patient_id} value={apt.patient_id}>
-                            {apt.profiles?.full_name || 'مريض'} - {apt.appointment_time}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="grid lg:grid-cols-3 gap-6">
+                {/* Form Section */}
+                <div className="lg:col-span-2 space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Pill className="h-5 w-5" />
+                        كتابة وصفة طبية
+                      </CardTitle>
+                      <CardDescription>اختر المريض وأضف الأدوية من القائمة أو يدوياً</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Patient Selection */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">اختر المريض *</label>
+                        <Select value={prescriptionPatientId} onValueChange={setPrescriptionPatientId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر مريضاً من مواعيد اليوم" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {todayAppointments.map((apt) => (
+                              <SelectItem key={apt.patient_id} value={apt.patient_id}>
+                                {apt.profiles?.full_name || 'مريض'} - {apt.appointment_time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  {/* Medications */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-medium">الأدوية *</label>
-                      <Button size="sm" variant="outline" onClick={addMedication}>
-                        <Plus className="h-4 w-4 ml-1" />
-                        إضافة دواء
-                      </Button>
-                    </div>
-                    <div className="space-y-3">
-                      {prescriptionMedications.map((med, index) => (
-                        <div key={index} className="grid grid-cols-5 gap-2 items-start">
+                      {/* Add Medication Form */}
+                      <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          إضافة دواء جديد
+                        </h4>
+                        
+                        {/* Medication Name with suggestions */}
+                        <div className="relative">
+                          <label className="block text-sm font-medium mb-1">اسم الدواء *</label>
                           <Input
-                            placeholder="اسم الدواء"
-                            value={med.name}
-                            onChange={(e) => updateMedication(index, 'name', e.target.value)}
-                            className="col-span-2"
+                            value={newMed.name}
+                            onChange={(e) => { setNewMed({ ...newMed, name: e.target.value }); setShowMedSuggestions(true); }}
+                            onFocus={() => setShowMedSuggestions(true)}
+                            placeholder="ابدأ بكتابة اسم الدواء..."
                           />
-                          <Input
-                            placeholder="الجرعة"
-                            value={med.dosage}
-                            onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
-                          />
-                          <Input
-                            placeholder="التكرار (مثلاً: 3 مرات يومياً)"
-                            value={med.frequency}
-                            onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
-                          />
-                          <div className="flex gap-1">
+                          {showMedSuggestions && filteredMedications.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                              {filteredMedications.map((med, i) => (
+                                <button
+                                  key={i}
+                                  className="w-full text-right px-3 py-2 hover:bg-muted flex items-center justify-between text-sm"
+                                  onClick={() => selectSuggestedMed(med)}
+                                >
+                                  <span className="font-medium">{med.name}</span>
+                                  <Badge variant="outline" className="text-xs">{med.category}</Badge>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Dosage */}
+                          <div>
+                            <label className="block text-sm font-medium mb-1">الجرعة *</label>
+                            {(() => {
+                              const selectedMed = commonMedications.find(m => m.name === newMed.name);
+                              if (selectedMed) {
+                                return (
+                                  <Select value={newMed.dosage} onValueChange={(v) => setNewMed({ ...newMed, dosage: v })}>
+                                    <SelectTrigger><SelectValue placeholder="اختر الجرعة" /></SelectTrigger>
+                                    <SelectContent>
+                                      {selectedMed.dosages.map(d => (
+                                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                );
+                              }
+                              return <Input value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} placeholder="مثال: 500mg" />;
+                            })()}
+                          </div>
+
+                          {/* Frequency */}
+                          <div>
+                            <label className="block text-sm font-medium mb-1">التكرار *</label>
+                            <Select value={newMed.frequency} onValueChange={(v) => setNewMed({ ...newMed, frequency: v })}>
+                              <SelectTrigger><SelectValue placeholder="اختر التكرار" /></SelectTrigger>
+                              <SelectContent>
+                                {frequencyOptions.map(f => (
+                                  <SelectItem key={f} value={f}>{f}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Duration */}
+                          <div>
+                            <label className="block text-sm font-medium mb-1">المدة</label>
+                            <Select value={newMed.duration} onValueChange={(v) => setNewMed({ ...newMed, duration: v })}>
+                              <SelectTrigger><SelectValue placeholder="اختر المدة" /></SelectTrigger>
+                              <SelectContent>
+                                {durationOptions.map(d => (
+                                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Notes */}
+                          <div>
+                            <label className="block text-sm font-medium mb-1">ملاحظات الدواء</label>
                             <Input
-                              placeholder="المدة"
-                              value={med.duration}
-                              onChange={(e) => updateMedication(index, 'duration', e.target.value)}
+                              value={newMed.notes}
+                              onChange={(e) => setNewMed({ ...newMed, notes: e.target.value })}
+                              placeholder="مثال: بعد الأكل"
                             />
-                            {prescriptionMedications.length > 1 && (
-                              <Button size="icon" variant="ghost" onClick={() => removeMedication(index)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Notes */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">ملاحظات</label>
-                    <Textarea
-                      placeholder="ملاحظات إضافية للمريض أو الصيدلي..."
-                      value={prescriptionNotes}
-                      onChange={(e) => setPrescriptionNotes(e.target.value)}
-                    />
-                  </div>
+                        <Button onClick={addMedicationToList} variant="secondary" className="w-full">
+                          <Plus className="w-4 h-4 ml-2" />
+                          إضافة الدواء للوصفة
+                        </Button>
+                      </div>
 
-                  <Button 
-                    className="w-full" 
-                    size="lg" 
-                    onClick={submitPrescription}
-                    disabled={prescriptionSubmitting}
-                  >
-                    {prescriptionSubmitting ? <Loader2 className="h-5 w-5 animate-spin ml-2" /> : <Send className="h-5 w-5 ml-2" />}
-                    إرسال الوصفة
-                  </Button>
-                </CardContent>
-              </Card>
+                      {/* General Notes */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">ملاحظات عامة</label>
+                        <Textarea
+                          placeholder="ملاحظات إضافية للمريض أو الصيدلي..."
+                          value={prescriptionNotes}
+                          onChange={(e) => setPrescriptionNotes(e.target.value)}
+                        />
+                      </div>
+
+                      <Button 
+                        className="w-full" 
+                        size="lg" 
+                        onClick={submitPrescription}
+                        disabled={prescriptionSubmitting || prescriptionMedications.length === 0}
+                      >
+                        {prescriptionSubmitting ? <Loader2 className="h-5 w-5 animate-spin ml-2" /> : <Send className="h-5 w-5 ml-2" />}
+                        إرسال الوصفة ({prescriptionMedications.length} دواء)
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Prescription Preview */}
+                <div className="lg:col-span-1">
+                  <Card className="sticky top-24">
+                    <CardHeader>
+                      <CardTitle className="text-base">معاينة الوصفة</CardTitle>
+                      <CardDescription>
+                        {prescriptionMedications.length === 0 
+                          ? 'لم تتم إضافة أدوية بعد' 
+                          : `${prescriptionMedications.length} دواء`}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {prescriptionMedications.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Pill className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm">أضف أدوية من النموذج</p>
+                        </div>
+                      ) : (
+                        prescriptionMedications.map((med, index) => (
+                          <div key={index} className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2">
+                                <Pill className="w-4 h-4 text-primary flex-shrink-0" />
+                                <span className="font-medium text-sm">{med.name}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive"
+                                onClick={() => removeMedication(index)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <div className="mt-1 mr-6 text-xs text-muted-foreground space-y-0.5">
+                              <p><Badge variant="outline" className="text-xs">{med.dosage}</Badge> - {med.frequency}</p>
+                              {med.duration && <p>المدة: {med.duration}</p>}
+                              {med.notes && <p className="italic">({med.notes})</p>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </TabsContent>
 
             {/* History Tab */}
