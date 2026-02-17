@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, AlertTriangle, CheckCircle, Clock, User, Calendar, 
   Loader2, Send, Inbox, History, UserCircle, Video, MessageSquare,
-  Bell, Stethoscope, FlaskConical, Play, Users
+  Bell, Stethoscope, FlaskConical, Play, Users, Pill, Plus, Trash2
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Navigate, Link } from 'react-router-dom';
@@ -74,6 +75,14 @@ const DoctorDashboard = () => {
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [unreadMessages, setUnreadMessages] = useState(0);
+  
+  // Prescription writing state
+  const [prescriptionPatientId, setPrescriptionPatientId] = useState('');
+  const [prescriptionMedications, setPrescriptionMedications] = useState([
+    { name: '', dosage: '', frequency: '', duration: '' }
+  ]);
+  const [prescriptionNotes, setPrescriptionNotes] = useState('');
+  const [prescriptionSubmitting, setPrescriptionSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -260,6 +269,57 @@ const DoctorDashboard = () => {
     }
   };
 
+  const addMedication = () => {
+    setPrescriptionMedications([...prescriptionMedications, { name: '', dosage: '', frequency: '', duration: '' }]);
+  };
+
+  const removeMedication = (index: number) => {
+    setPrescriptionMedications(prescriptionMedications.filter((_, i) => i !== index));
+  };
+
+  const updateMedication = (index: number, field: string, value: string) => {
+    const updated = [...prescriptionMedications];
+    updated[index] = { ...updated[index], [field]: value };
+    setPrescriptionMedications(updated);
+  };
+
+  const submitPrescription = async () => {
+    if (!prescriptionPatientId || prescriptionMedications.every(m => !m.name)) {
+      toast({ title: "خطأ", description: "يرجى اختيار المريض وإضافة دواء واحد على الأقل", variant: "destructive" });
+      return;
+    }
+
+    setPrescriptionSubmitting(true);
+    try {
+      const { error } = await supabase.from('prescriptions').insert({
+        doctor_id: doctorInfo?.id,
+        patient_id: prescriptionPatientId,
+        medications: prescriptionMedications.filter(m => m.name),
+        notes: prescriptionNotes,
+        status: 'pending'
+      });
+
+      if (error) throw error;
+
+      // Notify patient
+      await supabase.rpc('create_notification', {
+        p_user_id: prescriptionPatientId,
+        p_title: 'وصفة طبية جديدة',
+        p_message: 'لديك وصفة طبية جديدة من طبيبك',
+        p_type: 'info'
+      });
+
+      toast({ title: "تم", description: "تم إرسال الوصفة الطبية بنجاح" });
+      setPrescriptionPatientId('');
+      setPrescriptionMedications([{ name: '', dosage: '', frequency: '', duration: '' }]);
+      setPrescriptionNotes('');
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message || "حدث خطأ", variant: "destructive" });
+    } finally {
+      setPrescriptionSubmitting(false);
+    }
+  };
+
   const startConsultation = async (appointment: Appointment) => {
     const now = new Date();
     const appointmentTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
@@ -416,6 +476,10 @@ const DoctorDashboard = () => {
               <TabsTrigger value="lab-review" className="flex items-center gap-2">
                 <FlaskConical className="h-4 w-4" />
                 مراجعة التحاليل ({pendingRecords.length})
+              </TabsTrigger>
+              <TabsTrigger value="prescriptions" className="flex items-center gap-2">
+                <Pill className="h-4 w-4" />
+                كتابة وصفة
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-2">
                 <History className="h-4 w-4" />
@@ -736,6 +800,102 @@ const DoctorDashboard = () => {
                   )}
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Prescriptions Tab */}
+            <TabsContent value="prescriptions">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Pill className="h-5 w-5" />
+                    كتابة وصفة طبية
+                  </CardTitle>
+                  <CardDescription>اختر المريض وأضف الأدوية والجرعات</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Patient Selection from today's appointments */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">اختر المريض *</label>
+                    <Select value={prescriptionPatientId} onValueChange={setPrescriptionPatientId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر مريضاً من مواعيد اليوم" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {todayAppointments.map((apt) => (
+                          <SelectItem key={apt.patient_id} value={apt.patient_id}>
+                            {apt.profiles?.full_name || 'مريض'} - {apt.appointment_time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Medications */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-medium">الأدوية *</label>
+                      <Button size="sm" variant="outline" onClick={addMedication}>
+                        <Plus className="h-4 w-4 ml-1" />
+                        إضافة دواء
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      {prescriptionMedications.map((med, index) => (
+                        <div key={index} className="grid grid-cols-5 gap-2 items-start">
+                          <Input
+                            placeholder="اسم الدواء"
+                            value={med.name}
+                            onChange={(e) => updateMedication(index, 'name', e.target.value)}
+                            className="col-span-2"
+                          />
+                          <Input
+                            placeholder="الجرعة"
+                            value={med.dosage}
+                            onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
+                          />
+                          <Input
+                            placeholder="التكرار (مثلاً: 3 مرات يومياً)"
+                            value={med.frequency}
+                            onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
+                          />
+                          <div className="flex gap-1">
+                            <Input
+                              placeholder="المدة"
+                              value={med.duration}
+                              onChange={(e) => updateMedication(index, 'duration', e.target.value)}
+                            />
+                            {prescriptionMedications.length > 1 && (
+                              <Button size="icon" variant="ghost" onClick={() => removeMedication(index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">ملاحظات</label>
+                    <Textarea
+                      placeholder="ملاحظات إضافية للمريض أو الصيدلي..."
+                      value={prescriptionNotes}
+                      onChange={(e) => setPrescriptionNotes(e.target.value)}
+                    />
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    onClick={submitPrescription}
+                    disabled={prescriptionSubmitting}
+                  >
+                    {prescriptionSubmitting ? <Loader2 className="h-5 w-5 animate-spin ml-2" /> : <Send className="h-5 w-5 ml-2" />}
+                    إرسال الوصفة
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* History Tab */}

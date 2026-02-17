@@ -91,7 +91,6 @@ const Doctors = () => {
           name_fr
         )
       `)
-      .eq('is_verified', true)
       .eq('is_available', true);
 
     if (selectedWilaya && selectedWilaya !== 'all') {
@@ -106,8 +105,23 @@ const Doctors = () => {
 
     if (error) {
       console.error('Error fetching doctors:', error);
-    } else {
-      setDoctors(data as Doctor[]);
+    } else if (data) {
+      // Fetch doctor names from profiles
+      const userIds = data.map((d: any) => d.user_id);
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', userIds);
+        
+        const enriched = data.map((doc: any) => ({
+          ...doc,
+          doctor_name: profiles?.find(p => p.id === doc.user_id)?.full_name || doc.clinic_name
+        }));
+        setDoctors(enriched as Doctor[]);
+      } else {
+        setDoctors(data as Doctor[]);
+      }
     }
     setLoading(false);
   };
@@ -131,10 +145,11 @@ const Doctors = () => {
 
   const filteredDoctors = doctors.filter((doctor) => {
     if (!searchQuery) return true;
-    const name = doctor.clinic_name?.toLowerCase() || '';
+    const name = doctor.doctor_name?.toLowerCase() || doctor.clinic_name?.toLowerCase() || '';
+    const clinicName = doctor.clinic_name?.toLowerCase() || '';
     const specialty = doctor.specialties?.name_ar?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
-    return name.includes(query) || specialty.includes(query);
+    return name.includes(query) || clinicName.includes(query) || specialty.includes(query);
   });
 
   return (
@@ -220,20 +235,23 @@ const Doctors = () => {
               >
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-2xl font-bold text-primary">
-                    {doctor.clinic_name?.charAt(0) || 'د'}
+                    {(doctor.doctor_name || doctor.clinic_name || 'د').charAt(0)}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-foreground">
-                        {doctor.clinic_name || 'عيادة طبية'}
+                        د. {doctor.doctor_name || doctor.clinic_name || 'طبيب'}
                       </h3>
                       {doctor.is_verified && (
                         <CheckCircle className="w-4 h-4 text-primary" />
                       )}
                     </div>
                     <p className="text-sm text-primary font-medium">
-                      {doctor.specialties?.name_ar}
+                      {doctor.specialties?.name_ar || 'طب عام'}
                     </p>
+                    {doctor.clinic_name && (
+                      <p className="text-xs text-muted-foreground">{doctor.clinic_name}</p>
+                    )}
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                       <MapPin className="w-4 h-4" />
                       <span>{doctor.wilaya}</span>

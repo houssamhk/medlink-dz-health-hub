@@ -93,8 +93,7 @@ const BookAppointment = () => {
         *,
         specialties(name_ar, name_fr)
       `)
-      .eq('is_available', true)
-      .eq('is_verified', true);
+      .eq('is_available', true);
 
     if (filters.specialty) {
       query = query.eq('specialty_id', filters.specialty);
