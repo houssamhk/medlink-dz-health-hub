@@ -83,7 +83,7 @@ const VideoCall = ({
 
   // Call duration timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (connectionState === 'connected') {
       interval = setInterval(() => {
         setCallDuration(prev => prev + 1);
