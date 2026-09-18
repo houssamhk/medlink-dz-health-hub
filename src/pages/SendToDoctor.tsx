@@ -68,7 +68,6 @@ const SendToDoctor = () => {
       supabase
         .from('doctors')
         .select('id, clinic_name, wilaya, rating, consultation_price, user_id, specialty_id')
-        .eq('is_verified', true)
         .eq('is_available', true),
       
       supabase
