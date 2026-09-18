@@ -743,6 +743,92 @@ export type Database = {
           },
         ]
       }
+      medication_deliveries: {
+        Row: {
+          address: string
+          courier_name: string | null
+          courier_phone: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_fee: number
+          id: string
+          notes: string | null
+          patient_id: string
+          pharmacy_id: string
+          phone: string
+          prescription_id: string
+          recipient_name: string
+          status: string
+          updated_at: string
+          wilaya: string
+        }
+        Insert: {
+          address: string
+          courier_name?: string | null
+          courier_phone?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_fee?: number
+          id?: string
+          notes?: string | null
+          patient_id: string
+          pharmacy_id: string
+          phone: string
+          prescription_id: string
+          recipient_name: string
+          status?: string
+          updated_at?: string
+          wilaya: string
+        }
+        Update: {
+          address?: string
+          courier_name?: string | null
+          courier_phone?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_fee?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          pharmacy_id?: string
+          phone?: string
+          prescription_id?: string
+          recipient_name?: string
+          status?: string
+          updated_at?: string
+          wilaya?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_deliveries_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_deliveries_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_full"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_deliveries_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_deliveries_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           appointment_id: string | null
@@ -972,6 +1058,7 @@ export type Database = {
         Row: {
           appointment_id: string | null
           created_at: string
+          dispensed_at: string | null
           doctor_id: string
           id: string
           medications: Json
@@ -984,6 +1071,7 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           created_at?: string
+          dispensed_at?: string | null
           doctor_id: string
           id?: string
           medications?: Json
@@ -996,6 +1084,7 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           created_at?: string
+          dispensed_at?: string | null
           doctor_id?: string
           id?: string
           medications?: Json
@@ -1546,6 +1635,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      dispense_prescription: {
+        Args: { p_prescription_id: string }
+        Returns: Json
       }
       get_doctor_license_number: {
         Args: { doctor_id: string }
