@@ -14,6 +14,7 @@ import {
 import Navbar from '@/components/Navbar';
 import { Navigate, Link } from 'react-router-dom';
 import RecentPrescriptions from '@/components/pharmacy/RecentPrescriptions';
+import DeliveryRequests from '@/components/pharmacy/DeliveryRequests';
 
 interface PharmacyData {
   id: string;
@@ -335,6 +336,9 @@ const PharmacyDashboard = () => {
 
           {/* Recent Orders */}
           <RecentPrescriptions pharmacyId={pharmacy.id} />
+
+          {/* Delivery requests */}
+          <DeliveryRequests pharmacyId={pharmacy.id} />
 
           {/* Working Hours */}
           <Card>
