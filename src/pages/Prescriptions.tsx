@@ -77,6 +77,71 @@ const Prescriptions = () => {
   const [selectedPharmacy, setSelectedPharmacy] = useState('');
   const [sending, setSending] = useState(false);
 
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [deliveryFor, setDeliveryFor] = useState<Prescription | null>(null);
+  const [requestingDelivery, setRequestingDelivery] = useState(false);
+  const [deliveryForm, setDeliveryForm] = useState({
+    recipient_name: '', phone: '', wilaya: '', address: '', notes: ''
+  });
+
+  const fetchDeliveries = async (patientId: string) => {
+    const { data } = await supabase
+      .from('medication_deliveries')
+      .select('id, prescription_id, status, address, wilaya, delivery_fee')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+    setDeliveries(data || []);
+  };
+
+  const deliveryOf = (prescriptionId: string) =>
+    deliveries.find(d => d.prescription_id === prescriptionId && d.status !== 'cancelled');
+
+  const openDeliveryDialog = async (prescription: Prescription) => {
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, phone, wilaya, address')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    setDeliveryForm({
+      recipient_name: profile?.full_name || '',
+      phone: profile?.phone || '',
+      wilaya: profile?.wilaya || '',
+      address: profile?.address || '',
+      notes: '',
+    });
+    setDeliveryFor(prescription);
+  };
+
+  const requestDelivery = async () => {
+    if (!user || !deliveryFor?.pharmacy_id) return;
+    const { recipient_name, phone, wilaya, address, notes } = deliveryForm;
+    if (!recipient_name || !phone || !wilaya || !address) {
+      toast({ title: 'بيانات ناقصة', description: 'يرجى ملء الاسم والهاتف والولاية والعنوان', variant: 'destructive' });
+      return;
+    }
+
+    setRequestingDelivery(true);
+    const { error } = await supabase.from('medication_deliveries').insert({
+      prescription_id: deliveryFor.id,
+      patient_id: user.id,
+      pharmacy_id: deliveryFor.pharmacy_id,
+      recipient_name, phone, wilaya, address,
+      notes: notes || null,
+      delivery_fee: DELIVERY_FEE,
+    });
+
+    if (error) {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'تم إرسال الطلب', description: 'ستقوم الصيدلية بتجهيز أدويتك وتوصيلها' });
+      setDeliveryFor(null);
+      fetchDeliveries(user.id);
+    }
+    setRequestingDelivery(false);
+  };
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
