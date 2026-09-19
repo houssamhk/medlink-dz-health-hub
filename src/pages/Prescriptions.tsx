@@ -338,6 +338,39 @@ const Prescriptions = () => {
                         إرسال للصيدلية
                       </Button>
                     )}
+
+                    {(() => {
+                      const delivery = deliveryOf(prescription.id);
+                      if (delivery) {
+                        return (
+                          <div className="mt-3 p-3 rounded-lg bg-muted/40 space-y-1">
+                            <p className="font-medium flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-primary" />
+                              {DELIVERY_LABELS[delivery.status] || delivery.status}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> {delivery.address}، {delivery.wilaya}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              رسوم التوصيل: {delivery.delivery_fee} دج
+                            </p>
+                          </div>
+                        );
+                      }
+                      if (prescription.pharmacy_id && ['sent_to_pharmacy', 'dispensed'].includes(prescription.status)) {
+                        return (
+                          <Button
+                            variant="outline"
+                            className="w-full mt-3"
+                            onClick={() => openDeliveryDialog(prescription)}
+                          >
+                            <Truck className="w-4 h-4 ml-2" />
+                            طلب توصيل للمنزل ({DELIVERY_FEE} دج)
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
                   </CardContent>
                 </Card>
               ))}
