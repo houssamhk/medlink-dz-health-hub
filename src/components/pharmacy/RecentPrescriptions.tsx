@@ -54,18 +54,30 @@ const RecentPrescriptions = ({ pharmacyId }: { pharmacyId: string }) => {
     setLoading(false);
   };
 
-  const updateStatus = async (id: string, newStatus: string) => {
-    const { error } = await supabase
-      .from('prescriptions')
-      .update({ status: newStatus })
-      .eq('id', id);
+  const [dispensing, setDispensing] = useState<string | null>(null);
+
+  const confirmDispense = async (id: string) => {
+    setDispensing(id);
+    const { data, error } = await supabase.rpc('dispense_prescription', {
+      p_prescription_id: id,
+    });
 
     if (error) {
-      toast({ title: "خطأ", description: "فشل التحديث", variant: "destructive" });
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "تم", description: "تم تحديث حالة الوصفة" });
+      const result = data as { deducted?: { name: string; quantity: number }[]; missing?: { name: string }[] } | null;
+      const missing = result?.missing || [];
+      const deducted = result?.deducted || [];
+      toast({
+        title: "تم صرف الوصفة",
+        description: missing.length > 0
+          ? `تم خصم ${deducted.length} دواء من المخزون. غير متوفر: ${missing.map(m => m.name).join('، ')}`
+          : `تم خصم ${deducted.length} دواء من المخزون تلقائياً`,
+        variant: missing.length > 0 ? "destructive" : undefined,
+      });
       fetchPrescriptions();
     }
+    setDispensing(null);
   };
 
   return (
