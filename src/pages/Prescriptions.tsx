@@ -8,10 +8,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pill, User, Calendar, Send, CheckCircle, Clock, Store } from 'lucide-react';
+import { Loader2, Pill, User, Calendar, Send, CheckCircle, Clock, Store, Truck, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+
+const DELIVERY_FEE = 300;
+
+const DELIVERY_LABELS: Record<string, string> = {
+  requested: 'طلب التوصيل قيد المراجعة',
+  preparing: 'الصيدلية تجهز طلبك',
+  out_for_delivery: 'الطلب في الطريق إليك',
+  delivered: 'تم تسليم الأدوية',
+  cancelled: 'تم إلغاء التوصيل',
+};
+
+interface Delivery {
+  id: string;
+  prescription_id: string;
+  status: string;
+  address: string;
+  wilaya: string;
+  delivery_fee: number;
+}
 
 interface Medication {
   name: string;
@@ -54,6 +76,71 @@ const Prescriptions = () => {
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const [selectedPharmacy, setSelectedPharmacy] = useState('');
   const [sending, setSending] = useState(false);
+
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [deliveryFor, setDeliveryFor] = useState<Prescription | null>(null);
+  const [requestingDelivery, setRequestingDelivery] = useState(false);
+  const [deliveryForm, setDeliveryForm] = useState({
+    recipient_name: '', phone: '', wilaya: '', address: '', notes: ''
+  });
+
+  const fetchDeliveries = async (patientId: string) => {
+    const { data } = await supabase
+      .from('medication_deliveries')
+      .select('id, prescription_id, status, address, wilaya, delivery_fee')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+    setDeliveries(data || []);
+  };
+
+  const deliveryOf = (prescriptionId: string) =>
+    deliveries.find(d => d.prescription_id === prescriptionId && d.status !== 'cancelled');
+
+  const openDeliveryDialog = async (prescription: Prescription) => {
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, phone, wilaya, address')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    setDeliveryForm({
+      recipient_name: profile?.full_name || '',
+      phone: profile?.phone || '',
+      wilaya: profile?.wilaya || '',
+      address: profile?.address || '',
+      notes: '',
+    });
+    setDeliveryFor(prescription);
+  };
+
+  const requestDelivery = async () => {
+    if (!user || !deliveryFor?.pharmacy_id) return;
+    const { recipient_name, phone, wilaya, address, notes } = deliveryForm;
+    if (!recipient_name || !phone || !wilaya || !address) {
+      toast({ title: 'بيانات ناقصة', description: 'يرجى ملء الاسم والهاتف والولاية والعنوان', variant: 'destructive' });
+      return;
+    }
+
+    setRequestingDelivery(true);
+    const { error } = await supabase.from('medication_deliveries').insert({
+      prescription_id: deliveryFor.id,
+      patient_id: user.id,
+      pharmacy_id: deliveryFor.pharmacy_id,
+      recipient_name, phone, wilaya, address,
+      notes: notes || null,
+      delivery_fee: DELIVERY_FEE,
+    });
+
+    if (error) {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'تم إرسال الطلب', description: 'ستقوم الصيدلية بتجهيز أدويتك وتوصيلها' });
+      setDeliveryFor(null);
+      fetchDeliveries(user.id);
+    }
+    setRequestingDelivery(false);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -107,6 +194,7 @@ const Prescriptions = () => {
         .eq('is_on_duty', true);
 
       setPharmacies(pharmaciesData || []);
+      await fetchDeliveries(user.id);
       setLoading(false);
     };
 
@@ -250,6 +338,39 @@ const Prescriptions = () => {
                         إرسال للصيدلية
                       </Button>
                     )}
+
+                    {(() => {
+                      const delivery = deliveryOf(prescription.id);
+                      if (delivery) {
+                        return (
+                          <div className="mt-3 p-3 rounded-lg bg-muted/40 space-y-1">
+                            <p className="font-medium flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-primary" />
+                              {DELIVERY_LABELS[delivery.status] || delivery.status}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> {delivery.address}، {delivery.wilaya}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              رسوم التوصيل: {delivery.delivery_fee} دج
+                            </p>
+                          </div>
+                        );
+                      }
+                      if (prescription.pharmacy_id && ['sent_to_pharmacy', 'dispensed'].includes(prescription.status)) {
+                        return (
+                          <Button
+                            variant="outline"
+                            className="w-full mt-3"
+                            onClick={() => openDeliveryDialog(prescription)}
+                          >
+                            <Truck className="w-4 h-4 ml-2" />
+                            طلب توصيل للمنزل ({DELIVERY_FEE} دج)
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
                   </CardContent>
                 </Card>
               ))}
@@ -295,6 +416,66 @@ const Prescriptions = () => {
                 className="flex-1"
               >
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'إرسال'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal طلب التوصيل */}
+      <Dialog open={!!deliveryFor} onOpenChange={() => setDeliveryFor(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>طلب توصيل الأدوية للمنزل</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>اسم المستلم</Label>
+              <Input
+                value={deliveryForm.recipient_name}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, recipient_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>رقم الهاتف</Label>
+              <Input
+                dir="ltr"
+                value={deliveryForm.phone}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>الولاية</Label>
+              <Input
+                value={deliveryForm.wilaya}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, wilaya: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>العنوان الكامل</Label>
+              <Input
+                value={deliveryForm.address}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, address: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>ملاحظات للموصل (اختياري)</Label>
+              <Textarea
+                value={deliveryForm.notes}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, notes: e.target.value })}
+              />
+            </div>
+
+            <p className="text-sm text-muted-foreground bg-muted/40 p-3 rounded">
+              رسوم التوصيل: {DELIVERY_FEE} دج — تُدفع عند الاستلام
+            </p>
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setDeliveryFor(null)} className="flex-1">
+                إلغاء
+              </Button>
+              <Button onClick={requestDelivery} disabled={requestingDelivery} className="flex-1">
+                {requestingDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد الطلب'}
               </Button>
             </div>
           </div>
