@@ -421,6 +421,66 @@ const Prescriptions = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal طلب التوصيل */}
+      <Dialog open={!!deliveryFor} onOpenChange={() => setDeliveryFor(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>طلب توصيل الأدوية للمنزل</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>اسم المستلم</Label>
+              <Input
+                value={deliveryForm.recipient_name}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, recipient_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>رقم الهاتف</Label>
+              <Input
+                dir="ltr"
+                value={deliveryForm.phone}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>الولاية</Label>
+              <Input
+                value={deliveryForm.wilaya}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, wilaya: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>العنوان الكامل</Label>
+              <Input
+                value={deliveryForm.address}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, address: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>ملاحظات للموصل (اختياري)</Label>
+              <Textarea
+                value={deliveryForm.notes}
+                onChange={(e) => setDeliveryForm({ ...deliveryForm, notes: e.target.value })}
+              />
+            </div>
+
+            <p className="text-sm text-muted-foreground bg-muted/40 p-3 rounded">
+              رسوم التوصيل: {DELIVERY_FEE} دج — تُدفع عند الاستلام
+            </p>
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setDeliveryFor(null)} className="flex-1">
+                إلغاء
+              </Button>
+              <Button onClick={requestDelivery} disabled={requestingDelivery} className="flex-1">
+                {requestingDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد الطلب'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
