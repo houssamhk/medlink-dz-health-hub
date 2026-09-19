@@ -128,9 +128,18 @@ const RecentPrescriptions = ({ pharmacyId }: { pharmacyId: string }) => {
                   ))}
                 </div>
                 {rx.status !== 'dispensed' && (
-                  <Button size="sm" variant="outline" className="w-full" onClick={() => updateStatus(rx.id, 'dispensed')}>
-                    <CheckCircle className="h-4 w-4 ml-1" />
-                    تأكيد الصرف
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    disabled={dispensing === rx.id}
+                    onClick={() => confirmDispense(rx.id)}
+                  >
+                    {dispensing === rx.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <><CheckCircle className="h-4 w-4 ml-1" />تأكيد الصرف وخصم المخزون</>
+                    )}
                   </Button>
                 )}
               </div>
