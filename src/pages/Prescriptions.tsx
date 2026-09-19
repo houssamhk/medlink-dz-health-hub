@@ -194,6 +194,7 @@ const Prescriptions = () => {
         .eq('is_on_duty', true);
 
       setPharmacies(pharmaciesData || []);
+      await fetchDeliveries(user.id);
       setLoading(false);
     };
 
