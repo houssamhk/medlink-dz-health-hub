@@ -8,10 +8,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pill, User, Calendar, Send, CheckCircle, Clock, Store } from 'lucide-react';
+import { Loader2, Pill, User, Calendar, Send, CheckCircle, Clock, Store, Truck, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+
+const DELIVERY_FEE = 300;
+
+const DELIVERY_LABELS: Record<string, string> = {
+  requested: 'طلب التوصيل قيد المراجعة',
+  preparing: 'الصيدلية تجهز طلبك',
+  out_for_delivery: 'الطلب في الطريق إليك',
+  delivered: 'تم تسليم الأدوية',
+  cancelled: 'تم إلغاء التوصيل',
+};
+
+interface Delivery {
+  id: string;
+  prescription_id: string;
+  status: string;
+  address: string;
+  wilaya: string;
+  delivery_fee: number;
+}
 
 interface Medication {
   name: string;
